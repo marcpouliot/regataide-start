@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#07111f" />
+  <title>Regataide Start</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="manifest" href="manifest.json" />
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>Regataide Start</h1>
+      <p data-i18n="appSubtitle">Aide GPS pour départ de régate</p>
+    </div>
+    <div class="top-actions">
+      <a id="guideLink" class="guide-link" href="guide-fr.html" data-i18n="guide">Guide</a>
+      <label class="language-label"><span data-i18n="language">Langue</span>
+        <select id="languageSelect">
+          <option value="fr">FR</option>
+          <option value="en">EN</option>
+        </select>
+      </label>
+      <div id="gpsBadge" class="badge bad">GPS OFF</div>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel hero">
+      <div class="clock-row">
+        <div>
+          <span data-i18n="currentTime">Heure actuelle</span>
+          <strong id="currentClock">--:--:--</strong>
+        </div>
+        <div>
+          <span data-i18n="startTime">Heure départ</span>
+          <strong id="startClock">--:--:--</strong>
+        </div>
+      </div>
+
+      <div class="timer" id="timer">--:--</div>
+      <div class="subline" id="targetLine">Cible : --</div>
+
+      <div class="controls">
+        <button id="startGpsBtn" data-i18n="enableGps">Activer GPS</button>
+        <button id="syncBtn" class="primary" data-i18n="sync5">SYNC 5:00</button>
+        <button id="resetBtn" class="danger" data-i18n="reset">Reset</button>
+      </div>
+    </section>
+
+    <section class="panel start-panel">
+      <h2 data-i18n="startClockTitle">Horloge de départ</h2>
+      <div class="start-grid">
+        <label><span data-i18n="officialStartToday">Départ officiel aujourd’hui</span>
+          <input id="officialStartTime" type="time" step="1" />
+        </label>
+        <button id="armStartBtn" class="primary" data-i18n="armThisTime">Armer cette heure</button>
+      </div>
+      <label class="compact-label"><span data-i18n="speedUnit">Unité vitesse</span>
+        <select id="speedUnit">
+          <option value="knots" data-i18n="knots">Nœuds</option>
+          <option value="mph" data-i18n="mph">Milles/heure</option>
+        </select>
+      </label>
+      <p class="hint" data-i18n="clockHint">SYNC 5:00 règle automatiquement le départ à maintenant + 5 minutes. L’heure officielle permet d’entrer un départ précis.</p>
+    </section>
+
+    <section class="grid">
+      <div class="card">
+        <span data-i18n="distanceLine">Distance ligne</span>
+        <strong id="distanceToLine">-- m</strong>
+      </div>
+      <div class="card">
+        <span data-i18n="currentSpeed">Vitesse actuelle</span>
+        <strong id="currentSpeed">--</strong>
+      </div>
+      <div class="card">
+        <span data-i18n="idealSpeed">Vitesse idéale</span>
+        <strong id="idealSpeed">--</strong>
+      </div>
+      <div class="card status" id="statusCard">
+        <span data-i18n="state">État</span>
+        <strong id="speedStatus">---</strong>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2 data-i18n="position">Position</h2>
+      <div class="rows">
+        <div><span data-i18n="latitude">Latitude</span><strong id="lat">--</strong></div>
+        <div><span data-i18n="longitude">Longitude</span><strong id="lon">--</strong></div>
+        <div><span data-i18n="gpsAccuracy">Précision GPS</span><strong id="accuracy">-- m</strong></div>
+        <div><span data-i18n="startSide">Côté départ</span><strong id="sideText">--</strong></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2 data-i18n="startLine">Ligne de départ</h2>
+      <p class="hint" data-i18n="lineHint">A = bateau comité. B = bouée de départ. Le choix bâbord/tribord indique de quel côté le bateau doit laisser la bouée au passage.</p>
+      <div class="line-actions">
+        <button id="setABtn" data-i18n="setA">Position actuelle = bateau comité A</button>
+        <button id="setBBtn" data-i18n="setB">Position actuelle = bouée B</button>
+      </div>
+
+      <label><span data-i18n="committeeLat">Bateau comité A — latitude</span>
+        <input id="latA" inputmode="decimal" placeholder="45.123456" />
+      </label>
+      <label><span data-i18n="committeeLon">Bateau comité A — longitude</span>
+        <input id="lonA" inputmode="decimal" placeholder="-71.123456" />
+      </label>
+      <label><span data-i18n="buoyLat">Bouée B — latitude</span>
+        <input id="latB" inputmode="decimal" placeholder="45.123556" />
+      </label>
+      <label><span data-i18n="buoyLon">Bouée B — longitude</span>
+        <input id="lonB" inputmode="decimal" placeholder="-71.123656" />
+      </label>
+
+      <label><span data-i18n="buoyPassage">Passage de la bouée B</span>
+        <select id="buoySide">
+          <option value="port" data-i18n="buoyPort">Bouée à bâbord</option>
+          <option value="starboard" data-i18n="buoyStarboard">Bouée à tribord</option>
+        </select>
+      </label>
+
+      <label><span data-i18n="buffer">Zone tampon ligne, mètres</span>
+        <input id="lineBuffer" inputmode="numeric" value="10" />
+      </label>
+
+      <button id="saveBtn" data-i18n="saveConfig">Sauvegarder configuration</button>
+    </section>
+
+    <section class="panel notes">
+      <h2 data-i18n="notes">Notes</h2>
+      <p data-i18n="notesText">V1 sans carte. A = bateau comité, B = bouée. Le calcul utilise la distance perpendiculaire à la ligne A-B. Le GPS du téléphone peut varier de plusieurs mètres. L’unité de vitesse peut être affichée en nœuds ou en milles/heure pour faciliter le débogage.</p>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#07111f" />
+  <title>User Guide — Regataide Start</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>User Guide — Regataide Start</h1>
+      <p>V1 using phone GPS</p>
+    </div>
+    <div class="top-actions">
+      <a class="guide-link" href="index.html">Back to app</a>
+      <a class="guide-link" href="guide-fr.html">Français</a>
+    </div>
+  </header>
+  <main class="guide-page">
+
+    <section class="panel">
+      <h2>Purpose</h2>
+      <p>Regataide Start helps a sailor manage the approach to the starting line using the phone GPS. It is not an official judging tool.</p>
+      <p>The app calculates perpendicular distance to line A-B, line side, time remaining, and ideal speed to reach the line at the next full minute.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Line convention</h2>
+      <ul>
+        <li><strong>A</strong> = committee boat.</li>
+        <li><strong>B</strong> = starting buoy.</li>
+        <li><strong>Buoy to port</strong> = when crossing, the boat leaves the buoy on port.</li>
+        <li><strong>Buoy to starboard</strong> = when crossing, the boat leaves the buoy on starboard.</li>
+      </ul>
+      <p>The buffer avoids treating a few meters of GPS error as a definite crossing.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Quick start</h2>
+      <ol>
+        <li>Open the app over HTTPS on the phone.</li>
+        <li>Tap <strong>Enable GPS</strong> and accept permission.</li>
+        <li>Enter the coordinates for committee boat A and buoy B.</li>
+        <li>Choose <strong>Buoy to port</strong> or <strong>Buoy to starboard</strong>.</li>
+        <li>Choose the speed unit: knots or miles/hour.</li>
+        <li>Tap <strong>SYNC 5:00</strong> at the five-minute signal, or enter the official start time and tap <strong>Arm this time</strong>.</li>
+      </ol>
+    </section>
+
+    <section class="panel">
+      <h2>Example 1 — Sync at the five-minute signal</h2>
+      <p>At the official 5:00 signal, tap <strong>SYNC 5:00</strong>.</p>
+      <pre>Time remaining: 4:18
+Target: 4:00
+Available time: 18 s
+Line distance: 42 m
+Ideal speed: 4.5 kt</pre>
+      <p>Meaning: to cross the line at 4:00, aim for about 4.5 knots toward the line.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Example 2 — Fixed official start time</h2>
+      <p>The race starts at 13:35:00. Enter <strong>13:35:00</strong> under “Official start today”, then tap <strong>Arm this time</strong>.</p>
+      <p>The app uses the phone clock. Make sure the phone time is correct.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Example 3 — Wrong side of the line</h2>
+      <p>If the state shows <strong>Course side / line crossed</strong> or <strong>RETURN</strong>, the app believes the boat is on the wrong side of the starting line. Return to the pre-start side before using the calculation again.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Testing tips</h2>
+      <ul>
+        <li>First test walking or driving slowly in an open area.</li>
+        <li>Use a 10 to 15 m buffer with phone GPS.</li>
+        <li>Watch the displayed GPS accuracy. If it says ±20 m, results will be approximate.</li>
+        <li>Use miles/hour for easier land testing. Use knots for sailing.</li>
+      </ul>
+    </section>
+
+  </main>
+</body>
+</html>

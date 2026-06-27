@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#07111f" />
+  <title>Guide d’utilisation — Regataide Start</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>Guide d’utilisation — Regataide Start</h1>
+      <p>V1 avec GPS du téléphone</p>
+    </div>
+    <div class="top-actions">
+      <a class="guide-link" href="index.html">Retour app</a>
+      <a class="guide-link" href="guide-en.html">English</a>
+    </div>
+  </header>
+  <main class="guide-page">
+
+    <section class="panel">
+      <h2>But de l’application</h2>
+      <p>Regataide Start aide le régatier à gérer son approche de la ligne de départ avec le GPS du téléphone. Ce n’est pas un outil officiel de jugement.</p>
+      <p>L’app calcule la distance perpendiculaire à la ligne A-B, le côté de la ligne, le temps restant et la vitesse idéale pour atteindre la ligne à la prochaine minute pile.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Convention de la ligne</h2>
+      <ul>
+        <li><strong>A</strong> = bateau comité.</li>
+        <li><strong>B</strong> = bouée de départ.</li>
+        <li><strong>Bouée à bâbord</strong> = au passage, le bateau laisse la bouée du côté bâbord.</li>
+        <li><strong>Bouée à tribord</strong> = au passage, le bateau laisse la bouée du côté tribord.</li>
+      </ul>
+      <p>La zone tampon évite de traiter une erreur GPS de quelques mètres comme un franchissement certain.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Démarrage rapide</h2>
+      <ol>
+        <li>Ouvrir l’app en HTTPS sur le téléphone.</li>
+        <li>Appuyer sur <strong>Activer GPS</strong> et accepter la permission.</li>
+        <li>Entrer les coordonnées du bateau comité A et de la bouée B.</li>
+        <li>Choisir <strong>Bouée à bâbord</strong> ou <strong>Bouée à tribord</strong>.</li>
+        <li>Choisir l’unité de vitesse : nœuds ou milles/heure.</li>
+        <li>Appuyer sur <strong>SYNC 5:00</strong> au signal de cinq minutes, ou entrer l’heure officielle et appuyer sur <strong>Armer cette heure</strong>.</li>
+      </ol>
+    </section>
+
+    <section class="panel">
+      <h2>Exemple 1 — Synchronisation au signal 5 minutes</h2>
+      <p>Au signal sonore officiel de 5:00, appuyer sur <strong>SYNC 5:00</strong>.</p>
+      <pre>Temps restant : 4:18
+Cible : 4:00
+Temps disponible : 18 s
+Distance ligne : 42 m
+Vitesse idéale : 4.5 nds</pre>
+      <p>Interprétation : pour couper la ligne à 4:00, il faudrait viser environ 4.5 nœuds vers la ligne.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Exemple 2 — Départ officiel à heure fixe</h2>
+      <p>La régate démarre à 13:35:00. Entrer <strong>13:35:00</strong> dans “Départ officiel aujourd’hui”, puis appuyer sur <strong>Armer cette heure</strong>.</p>
+      <p>L’app utilisera l’heure du téléphone. Vérifier que l’heure du téléphone est correcte.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Exemple 3 — Mauvais côté de la ligne</h2>
+      <p>Si l’état affiche <strong>Côté course / ligne franchie</strong> ou <strong>REVENIR</strong>, l’app considère que le bateau est du mauvais côté de la ligne de départ. Revenir du bon côté avant de reprendre le calcul utile.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Conseils de test</h2>
+      <ul>
+        <li>Tester d’abord à pied ou en voiture lente dans un endroit ouvert.</li>
+        <li>Utiliser une zone tampon de 10 à 15 m avec le GPS du téléphone.</li>
+        <li>Surveiller la précision GPS affichée. Si elle est ±20 m, les résultats seront approximatifs.</li>
+        <li>En milles/heure, vérifier plus facilement les calculs terrestres. En régate, utiliser les nœuds.</li>
+      </ul>
+    </section>
+
+  </main>
+</body>
+</html>
