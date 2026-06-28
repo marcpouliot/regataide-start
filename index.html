@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#07111f" />
   <title>Regataide Start2</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="style.css" />
   <link rel="manifest" href="manifest.json" />
 </head>
@@ -54,6 +55,15 @@
         <button id="syncBtn" class="primary" data-i18n="sync5">SYNC 5:00</button>
         <button id="resetBtn" class="danger" data-i18n="reset">Reset</button>
       </div>
+    </section>
+
+    <section class="panel map-panel">
+      <div class="section-head">
+        <h2 data-i18n="mapTitle">Carte</h2>
+        <button id="centerMapBtn" class="small-button" data-i18n="centerMap">Centrer</button>
+      </div>
+      <div id="map" class="map" aria-label="Carte de départ"></div>
+      <p id="mapStatus" class="hint" data-i18n="mapWaiting">Carte prête. Active le GPS et entre la ligne A-B.</p>
     </section>
 
     <section class="panel start-panel">
@@ -151,6 +161,7 @@
     </section>
   </main>
 
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

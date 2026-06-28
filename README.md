@@ -5,10 +5,12 @@ Aide GPS pour départ de régate. Application web/PWA indépendante de Regataide
 ## Fonctions
 
 - GPS du téléphone
+- Carte Leaflet/OpenStreetMap
 - Ligne de départ : A = bateau comité, B = bouée
 - Passage de la bouée à bâbord ou à tribord
 - SYNC 5:00 ou heure officielle de départ
 - Distance à la ligne : mode perpendiculaire ou centre de ligne
+- Affichage graphique du bateau, de la ligne A-B, du centre et du point GAP
 - Vitesse actuelle
 - Vitesse idéale vers la prochaine minute pile
 - Affichage en nœuds ou milles/heure
@@ -32,3 +34,7 @@ Sur téléphone, utiliser idéalement HTTPS via GitHub Pages ou Vercel, car le G
 ## Limite importante
 
 Le GPS d’un téléphone peut varier de plusieurs mètres. Cette app est une aide tactique, pas un outil officiel de jugement de ligne.
+
+## Carte
+
+La carte utilise Leaflet et les tuiles OpenStreetMap. Elle demande une connexion internet pour charger la bibliothèque et les fonds de carte. Si la carte ne charge pas, le mode texte de l’app continue de fonctionner.

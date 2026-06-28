@@ -60,5 +60,14 @@
   "startCountdown": "Départ dans",
   "distanceMode": "Mode distance",
   "distancePerpendicular": "Perpendiculaire à la ligne",
-  "distanceCenter": "Centre de la ligne"
+  "distanceCenter": "Centre de la ligne",
+  "mapTitle": "Carte de départ",
+  "centerMap": "Centrer",
+  "mapWaiting": "Carte prête. Active le GPS et entre la ligne A-B.",
+  "mapLeafletMissing": "Carte non chargée. Vérifie la connexion internet.",
+  "boatPosition": "Bateau",
+  "committeeBoat": "Comité A",
+  "startingBuoy": "Bouée B",
+  "lineCenter": "Centre ligne",
+  "gapTarget": "Point GAP"
 }

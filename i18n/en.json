@@ -60,5 +60,14 @@
   "startCountdown": "Start in",
   "distanceMode": "Distance mode",
   "distancePerpendicular": "Perpendicular to line",
-  "distanceCenter": "Line center"
+  "distanceCenter": "Line center",
+  "mapTitle": "Start map",
+  "centerMap": "Center",
+  "mapWaiting": "Map ready. Enable GPS and enter line A-B.",
+  "mapLeafletMissing": "Map not loaded. Check internet connection.",
+  "boatPosition": "Boat",
+  "committeeBoat": "Committee A",
+  "startingBuoy": "Buoy B",
+  "lineCenter": "Line center",
+  "gapTarget": "GAP point"
 }

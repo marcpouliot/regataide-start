@@ -30,7 +30,7 @@ header {
   top: 0;
   background: rgba(7,17,31,.95);
   backdrop-filter: blur(8px);
-  z-index: 2;
+  z-index: 1000;
 }
 
 h1, h2, p { margin: 0; }
@@ -162,4 +162,47 @@ label {
 @media (max-width: 520px) {
   .controls, .grid, .rows, .clock-row, .start-grid, .settings-grid { grid-template-columns: 1fr; }
   header { align-items: flex-start; }
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  margin-bottom: .75rem;
+}
+.section-head h2 { margin-bottom: 0; }
+.small-button {
+  width: auto;
+  padding: .55rem .8rem;
+  border-radius: 999px;
+  font-size: .9rem;
+}
+.map-panel { padding: .75rem; }
+.map {
+  height: min(58vh, 440px);
+  min-height: 280px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: #0b1627;
+}
+.map-panel .hint {
+  margin-top: .6rem;
+  line-height: 1.35;
+}
+.leaflet-container {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #0b1627;
+}
+.leaflet-control-attribution {
+  font-size: 10px;
+}
+.leaflet-tooltip {
+  background: rgba(7,17,31,.92);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-weight: 700;
+  box-shadow: none;
 }

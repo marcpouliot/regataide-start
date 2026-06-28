@@ -14,6 +14,19 @@ let audioCtx = null;
 let translations = {};
 let lang = localStorage.getItem('regataide-start-lang') || 'fr';
 
+let map = null;
+let mapHasCentered = false;
+const mapLayers = {
+  boat: null,
+  accuracy: null,
+  startLine: null,
+  committee: null,
+  buoy: null,
+  center: null,
+  gap: null,
+  gapLine: null,
+};
+
 const $ = (id) => document.getElementById(id);
 
 const el = {
@@ -51,6 +64,9 @@ const el = {
   setABtn: $('setABtn'),
   setBBtn: $('setBBtn'),
   saveBtn: $('saveBtn'),
+  map: $('map'),
+  mapStatus: $('mapStatus'),
+  centerMapBtn: $('centerMapBtn'),
 };
 
 function t(key) {
@@ -78,7 +94,9 @@ async function loadLanguage(nextLang = lang) {
 
   updateGpsBadge();
   updateGpsDisplay();
+  initMap();
   updateCalculations();
+  updateMap();
 }
 
 function num(value) {
@@ -156,6 +174,14 @@ function toLocalMeters(lat, lon, refLat, refLon) {
   };
 }
 
+function metersToLatLon(x, y, refLat, refLon) {
+  const latRad = refLat * Math.PI / 180;
+  return {
+    lat: refLat + (y / EARTH_RADIUS_M) * 180 / Math.PI,
+    lon: refLon + (x / (EARTH_RADIUS_M * Math.cos(latRad))) * 180 / Math.PI,
+  };
+}
+
 function lineMetrics(pos, cfg) {
   const b = toLocalMeters(cfg.latB, cfg.lonB, cfg.latA, cfg.lonA);
   const p = toLocalMeters(pos.lat, pos.lon, cfg.latA, cfg.lonA);
@@ -167,14 +193,160 @@ function lineMetrics(pos, cfg) {
   const side = signed >= 0 ? 'left' : 'right';
 
   const center = { x: b.x / 2, y: b.y / 2 };
+  const centerLatLon = metersToLatLon(center.x, center.y, cfg.latA, cfg.lonA);
   const centerDistance = Math.hypot(p.x - center.x, p.y - center.y);
+
+  const projectionRatio = (p.x * b.x + p.y * b.y) / (len * len);
+  const projected = { x: b.x * projectionRatio, y: b.y * projectionRatio };
+  const projectedLatLon = metersToLatLon(projected.x, projected.y, cfg.latA, cfg.lonA);
 
   return {
     signed,
     side,
     perpendicularDistance: Math.abs(signed),
     centerDistance,
+    centerLatLon,
+    projectedLatLon,
   };
+}
+
+
+function initMap() {
+  if (!el.map || map) return;
+  if (!window.L) {
+    if (el.mapStatus) el.mapStatus.textContent = t('mapLeafletMissing');
+    return;
+  }
+
+  map = L.map(el.map, { zoomControl: true, attributionControl: true }).setView([45.4, -71.0], 12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap contributors',
+  }).addTo(map);
+  setTimeout(() => map.invalidateSize(), 100);
+}
+
+function removeLayer(key) {
+  const layer = mapLayers[key];
+  if (map && layer) map.removeLayer(layer);
+  mapLayers[key] = null;
+}
+
+function setCircleLayer(key, latlng, label, options = {}) {
+  if (!map) return;
+  const style = Object.assign({
+    radius: 7,
+    weight: 3,
+    opacity: 1,
+    fillOpacity: 0.85,
+  }, options);
+
+  if (!mapLayers[key]) {
+    mapLayers[key] = L.circleMarker(latlng, style).addTo(map);
+  } else {
+    mapLayers[key].setLatLng(latlng);
+    mapLayers[key].setStyle(style);
+  }
+  mapLayers[key].bindTooltip(label, { permanent: false, direction: 'top' });
+}
+
+function fitMapToData() {
+  if (!map) return;
+  const cfg = getConfig();
+  const points = [];
+  if (currentPos) points.push([currentPos.lat, currentPos.lon]);
+  if ([cfg.latA, cfg.lonA].every(Number.isFinite)) points.push([cfg.latA, cfg.lonA]);
+  if ([cfg.latB, cfg.lonB].every(Number.isFinite)) points.push([cfg.latB, cfg.lonB]);
+
+  if (points.length === 1) map.setView(points[0], 16);
+  if (points.length > 1) map.fitBounds(points, { padding: [35, 35], maxZoom: 18 });
+  mapHasCentered = true;
+  setTimeout(() => map.invalidateSize(), 50);
+}
+
+function updateMap() {
+  if (!map) return;
+
+  const cfg = getConfig();
+  const hasLine = [cfg.latA, cfg.lonA, cfg.latB, cfg.lonB].every(Number.isFinite);
+  let status = t('mapWaiting');
+
+  if (currentPos) {
+    const boatLatLng = [currentPos.lat, currentPos.lon];
+    setCircleLayer('boat', boatLatLng, t('boatPosition'), {
+      color: '#4db6ff', fillColor: '#4db6ff', radius: 8,
+    });
+
+    if (!mapLayers.accuracy) {
+      mapLayers.accuracy = L.circle(boatLatLng, {
+        radius: Math.max(1, currentPos.accuracy || 1),
+        color: '#4db6ff', fillColor: '#4db6ff', fillOpacity: 0.08, weight: 1,
+      }).addTo(map);
+    } else {
+      mapLayers.accuracy.setLatLng(boatLatLng);
+      mapLayers.accuracy.setRadius(Math.max(1, currentPos.accuracy || 1));
+    }
+    status = `GPS ±${fmt(currentPos.accuracy, 0)} m`;
+  } else {
+    removeLayer('boat');
+    removeLayer('accuracy');
+  }
+
+  if (hasLine) {
+    const a = [cfg.latA, cfg.lonA];
+    const b = [cfg.latB, cfg.lonB];
+    if (!mapLayers.startLine) {
+      mapLayers.startLine = L.polyline([a, b], { color: '#ffffff', weight: 4, opacity: 0.9 }).addTo(map);
+    } else {
+      mapLayers.startLine.setLatLngs([a, b]);
+    }
+
+    setCircleLayer('committee', a, t('committeeBoat'), { color: '#ffce4a', fillColor: '#ffce4a', radius: 7 });
+    setCircleLayer('buoy', b, t('startingBuoy'), { color: '#ff5d5d', fillColor: '#ff5d5d', radius: 7 });
+
+    const metricsForCenter = currentPos ? lineMetrics(currentPos, cfg) : null;
+    let centerLatLon;
+    if (metricsForCenter) {
+      centerLatLon = metricsForCenter.centerLatLon;
+    } else {
+      centerLatLon = {
+        lat: (cfg.latA + cfg.latB) / 2,
+        lon: (cfg.lonA + cfg.lonB) / 2,
+      };
+    }
+    setCircleLayer('center', [centerLatLon.lat, centerLatLon.lon], t('lineCenter'), {
+      color: '#c58cff', fillColor: '#c58cff', radius: 5,
+    });
+
+    if (currentPos) {
+      const metrics = lineMetrics(currentPos, cfg);
+      if (metrics) {
+        const target = cfg.distanceMode === 'center' ? metrics.centerLatLon : metrics.projectedLatLon;
+        const targetLatLng = [target.lat, target.lon];
+        setCircleLayer('gap', targetLatLng, t('gapTarget'), {
+          color: '#36d17c', fillColor: '#36d17c', radius: 6,
+        });
+        const boatLatLng = [currentPos.lat, currentPos.lon];
+        if (!mapLayers.gapLine) {
+          mapLayers.gapLine = L.polyline([boatLatLng, targetLatLng], {
+            color: '#36d17c', weight: 2, opacity: 0.8, dashArray: '6 6',
+          }).addTo(map);
+        } else {
+          mapLayers.gapLine.setLatLngs([boatLatLng, targetLatLng]);
+        }
+        status = `${status} · ${cfg.distanceMode === 'center' ? t('distanceCenter') : t('distancePerpendicular')}`;
+      }
+    } else {
+      removeLayer('gap');
+      removeLayer('gapLine');
+    }
+  } else {
+    for (const key of ['startLine', 'committee', 'buoy', 'center', 'gap', 'gapLine']) removeLayer(key);
+  }
+
+  if (el.mapStatus) el.mapStatus.textContent = status;
+
+  if (!mapHasCentered && (currentPos || hasLine)) fitMapToData();
 }
 
 function targetSecondsRemaining(remaining) {
@@ -247,6 +419,7 @@ function updateCalculations() {
 
   const cfg = getConfig();
   const hasLine = [cfg.latA, cfg.lonA, cfg.latB, cfg.lonB].every(Number.isFinite);
+  updateMap();
 
   if (!currentPos || !hasLine) {
     el.distanceToLine.textContent = '-- m';
@@ -328,6 +501,7 @@ function startGps() {
       };
       updateGpsBadge();
       updateGpsDisplay();
+      updateMap();
       updateCalculations();
     },
     (err) => {
@@ -389,6 +563,7 @@ function wireEvents() {
   el.setABtn.addEventListener('click', () => useCurrentAs('A'));
   el.setBBtn.addEventListener('click', () => useCurrentAs('B'));
   el.saveBtn.addEventListener('click', () => { saveConfig(); beep(660, 90); updateCalculations(); });
+  el.centerMapBtn?.addEventListener('click', fitMapToData);
   el.languageSelect.addEventListener('change', () => loadLanguage(el.languageSelect.value));
 
   for (const input of [el.latA, el.lonA, el.latB, el.lonB, el.buoySide, el.lineBuffer, el.speedUnit, el.distanceMode, el.officialStartTime]) {
