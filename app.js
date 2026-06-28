@@ -4,34 +4,35 @@ const KNOTS_PER_MPS = 1.9438444924;
 const MPH_PER_MPS = 2.2369362921;
 const EARTH_RADIUS_M = 6371000;
 const START_SECONDS = 5 * 60;
-const STORAGE_KEY = 'regataide-start-v1';
-const LANG_KEY = 'regataide-start-lang';
+const STORAGE_KEY = 'regataide-start-v2';
 
 let watchId = null;
 let currentPos = null;
 let startTimeMs = null;
 let lastSignalSecond = null;
 let audioCtx = null;
-let currentLang = localStorage.getItem(LANG_KEY) || 'fr';
-let i18n = {};
+let translations = {};
+let lang = localStorage.getItem('regataide-start-lang') || 'fr';
 
 const $ = (id) => document.getElementById(id);
 
 const el = {
-  html: document.documentElement,
+  gpsBadge: $('gpsBadge'),
   guideLink: $('guideLink'),
   languageSelect: $('languageSelect'),
-  gpsBadge: $('gpsBadge'),
+  fixedTimer: $('fixedTimer'),
+  fixedTarget: $('fixedTarget'),
   currentClock: $('currentClock'),
   startClock: $('startClock'),
-  officialStartTime: $('officialStartTime'),
-  armStartBtn: $('armStartBtn'),
-  speedUnit: $('speedUnit'),
   timer: $('timer'),
   targetLine: $('targetLine'),
   startGpsBtn: $('startGpsBtn'),
   syncBtn: $('syncBtn'),
   resetBtn: $('resetBtn'),
+  armStartBtn: $('armStartBtn'),
+  officialStartTime: $('officialStartTime'),
+  speedUnit: $('speedUnit'),
+  distanceMode: $('distanceMode'),
   distanceToLine: $('distanceToLine'),
   currentSpeed: $('currentSpeed'),
   idealSpeed: $('idealSpeed'),
@@ -53,26 +54,26 @@ const el = {
 };
 
 function t(key) {
-  return i18n[key] || key;
+  return translations[key] || key;
 }
 
-async function loadLanguage(lang) {
-  currentLang = lang;
-  localStorage.setItem(LANG_KEY, lang);
-  el.html.lang = lang;
+async function loadLanguage(nextLang = lang) {
+  lang = nextLang;
+  localStorage.setItem('regataide-start-lang', lang);
+  document.documentElement.lang = lang;
   el.languageSelect.value = lang;
   el.guideLink.href = lang === 'en' ? 'guide-en.html' : 'guide-fr.html';
 
   try {
     const res = await fetch(`i18n/${lang}.json`, { cache: 'no-store' });
-    i18n = await res.json();
+    translations = await res.json();
   } catch {
-    i18n = {};
+    translations = {};
   }
 
   document.querySelectorAll('[data-i18n]').forEach((node) => {
-    const key = node.dataset.i18n;
-    if (i18n[key]) node.textContent = i18n[key];
+    const key = node.getAttribute('data-i18n');
+    if (translations[key]) node.textContent = translations[key];
   });
 
   updateGpsBadge();
@@ -81,7 +82,7 @@ async function loadLanguage(lang) {
 }
 
 function num(value) {
-  const n = Number(String(value).replace(',', '.'));
+  const n = Number(String(value ?? '').replace(',', '.'));
   return Number.isFinite(n) ? n : null;
 }
 
@@ -89,32 +90,26 @@ function fmt(n, decimals = 0) {
   return Number.isFinite(n) ? n.toFixed(decimals) : '--';
 }
 
-function fmtTimer(seconds) {
-  if (!Number.isFinite(seconds)) return '--:--';
-  const s = Math.max(0, Math.ceil(seconds));
-  const m = Math.floor(s / 60);
-  const r = s % 60;
-  return `${m}:${String(r).padStart(2, '0')}`;
-}
-
-function fmtClock(ms) {
+function fmtTime(ms) {
   if (!Number.isFinite(ms)) return '--:--:--';
-  return new Date(ms).toLocaleTimeString(currentLang === 'en' ? 'en-CA' : 'fr-CA', {
+  return new Date(ms).toLocaleTimeString(lang === 'en' ? 'en-CA' : 'fr-CA', {
     hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
   });
 }
 
-function speedUnitLabel() {
-  return el.speedUnit.value === 'mph' ? 'mph' : (currentLang === 'en' ? 'kt' : 'nds');
+function fmtTimer(seconds) {
+  if (!Number.isFinite(seconds)) return '--:--';
+  const sign = seconds < 0 ? '+' : '';
+  const s = Math.abs(Math.ceil(seconds));
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return `${sign}${m}:${String(r).padStart(2, '0')}`;
 }
 
-function speedFromMps(mps) {
-  return el.speedUnit.value === 'mph' ? mps * MPH_PER_MPS : mps * KNOTS_PER_MPS;
-}
-
-function fmtSpeed(mps) {
-  if (!Number.isFinite(mps)) return `-- ${speedUnitLabel()}`;
-  return `${fmt(speedFromMps(mps), 1)} ${speedUnitLabel()}`;
+function speedLabel(mps) {
+  if (!Number.isFinite(mps)) return '--';
+  if (el.speedUnit.value === 'mph') return `${fmt(mps * MPH_PER_MPS, 1)} mph`;
+  return `${fmt(mps * KNOTS_PER_MPS, 1)} nds`;
 }
 
 function getConfig() {
@@ -126,6 +121,7 @@ function getConfig() {
     buoySide: el.buoySide.value,
     lineBuffer: Math.max(1, num(el.lineBuffer.value) ?? 10),
     speedUnit: el.speedUnit.value,
+    distanceMode: el.distanceMode.value,
   };
 }
 
@@ -138,41 +134,47 @@ function saveConfig() {
     buoySide: el.buoySide.value,
     lineBuffer: el.lineBuffer.value,
     speedUnit: el.speedUnit.value,
+    distanceMode: el.distanceMode.value,
+    officialStartTime: el.officialStartTime.value,
   }));
 }
 
 function loadConfig() {
   try {
     const cfg = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-    const map = {
-      validSide: 'buoySide', // compatibilité ancienne V1
-      latA: 'latA', lonA: 'lonA', latB: 'latB', lonB: 'lonB', buoySide: 'buoySide', lineBuffer: 'lineBuffer', speedUnit: 'speedUnit',
-    };
-    Object.entries(map).forEach(([oldKey, elKey]) => {
-      if (cfg[oldKey] !== undefined && el[elKey]) el[elKey].value = cfg[oldKey];
-    });
+    for (const key of ['latA', 'lonA', 'latB', 'lonB', 'buoySide', 'lineBuffer', 'speedUnit', 'distanceMode', 'officialStartTime']) {
+      if (cfg[key] !== undefined && el[key]) el[key].value = cfg[key];
+    }
   } catch {}
 }
 
 function toLocalMeters(lat, lon, refLat, refLon) {
   const latRad = refLat * Math.PI / 180;
-  const x = (lon - refLon) * Math.PI / 180 * EARTH_RADIUS_M * Math.cos(latRad);
-  const y = (lat - refLat) * Math.PI / 180 * EARTH_RADIUS_M;
-  return { x, y };
+  return {
+    x: (lon - refLon) * Math.PI / 180 * EARTH_RADIUS_M * Math.cos(latRad),
+    y: (lat - refLat) * Math.PI / 180 * EARTH_RADIUS_M,
+  };
 }
 
-function signedDistanceToLine(pos, cfg) {
-  const a = { x: 0, y: 0 };
+function lineMetrics(pos, cfg) {
   const b = toLocalMeters(cfg.latB, cfg.lonB, cfg.latA, cfg.lonA);
   const p = toLocalMeters(pos.lat, pos.lon, cfg.latA, cfg.lonA);
-  const vx = b.x - a.x;
-  const vy = b.y - a.y;
-  const wx = p.x - a.x;
-  const wy = p.y - a.y;
-  const len = Math.hypot(vx, vy);
+  const len = Math.hypot(b.x, b.y);
   if (len < 1) return null;
-  const cross = vx * wy - vy * wx;
-  return cross / len;
+
+  const cross = b.x * p.y - b.y * p.x;
+  const signed = cross / len;
+  const side = signed >= 0 ? 'left' : 'right';
+
+  const center = { x: b.x / 2, y: b.y / 2 };
+  const centerDistance = Math.hypot(p.x - center.x, p.y - center.y);
+
+  return {
+    signed,
+    side,
+    perpendicularDistance: Math.abs(signed),
+    centerDistance,
+  };
 }
 
 function targetSecondsRemaining(remaining) {
@@ -206,18 +208,10 @@ function playSignal(remainingCeil) {
   }
 }
 
-function remainingSeconds() {
-  if (startTimeMs === null) return null;
-  return (startTimeMs - Date.now()) / 1000;
-}
-
 function updateGpsBadge() {
-  if (!el.gpsBadge) return;
   if (!currentPos) {
-    if (!watchId) {
-      el.gpsBadge.textContent = t('gpsOff');
-      el.gpsBadge.className = 'badge bad';
-    }
+    el.gpsBadge.textContent = t('gpsOff');
+    el.gpsBadge.className = 'badge bad';
     return;
   }
   el.gpsBadge.textContent = `GPS ±${fmt(currentPos.accuracy, 0)} m`;
@@ -225,25 +219,29 @@ function updateGpsBadge() {
 }
 
 function updateGpsDisplay() {
-  if (!currentPos) {
-    el.currentSpeed.textContent = fmtSpeed(null);
-    return;
-  }
+  if (!currentPos) return;
   el.lat.textContent = currentPos.lat.toFixed(7);
   el.lon.textContent = currentPos.lon.toFixed(7);
   el.accuracy.textContent = `${fmt(currentPos.accuracy, 0)} m`;
-  el.currentSpeed.textContent = fmtSpeed(currentPos.speedMps);
+  el.currentSpeed.textContent = currentPos.speedMps === null ? '--' : speedLabel(currentPos.speedMps);
+}
+
+function setStatus(text, cls) {
+  el.speedStatus.textContent = text;
+  el.statusCard.className = `card status ${cls}`.trim();
 }
 
 function updateCalculations() {
   const now = Date.now();
-  const remaining = remainingSeconds();
+  el.currentClock.textContent = fmtTime(now);
+  el.startClock.textContent = startTimeMs ? fmtTime(startTimeMs) : '--:--:--';
 
-  el.currentClock.textContent = fmtClock(now);
-  el.startClock.textContent = fmtClock(startTimeMs);
-  el.timer.textContent = fmtTimer(remaining);
+  const remaining = startTimeMs === null ? null : (startTimeMs - now) / 1000;
+  const timerText = fmtTimer(remaining);
+  el.timer.textContent = timerText;
+  el.fixedTimer.textContent = timerText;
 
-  if (Number.isFinite(remaining)) {
+  if (Number.isFinite(remaining) && remaining >= -2) {
     playSignal(Math.max(0, Math.ceil(remaining)));
   }
 
@@ -252,61 +250,60 @@ function updateCalculations() {
 
   if (!currentPos || !hasLine) {
     el.distanceToLine.textContent = '-- m';
-    el.idealSpeed.textContent = fmtSpeed(null);
-    el.speedStatus.textContent = '---';
+    el.idealSpeed.textContent = '--';
     el.sideText.textContent = '--';
-    el.targetLine.textContent = hasLine ? t('waitingGps') : t('enterLine');
+    setStatus('---', '');
+    const msg = hasLine ? t('waitingGps') : t('enterLine');
+    el.targetLine.textContent = msg;
+    el.fixedTarget.textContent = msg;
     return;
   }
 
-  const signed = signedDistanceToLine(currentPos, cfg);
-  if (signed === null) return;
+  const metrics = lineMetrics(currentPos, cfg);
+  if (!metrics) return;
 
-  // Ligne orientée A(comité) -> B(bouée). Côté port/starboard selon la bouée à laisser au passage.
-  // Convention V1 : port = côté gauche de A->B, starboard = côté droit de A->B.
-  const side = signed >= 0 ? 'port' : 'starboard';
-  const valid = side === cfg.buoySide;
-  const absDist = Math.abs(signed);
-  const inBuffer = absDist <= cfg.lineBuffer;
+  const distance = cfg.distanceMode === 'center' ? metrics.centerDistance : metrics.perpendicularDistance;
+  const desiredSide = cfg.buoySide === 'port' ? 'right' : 'left';
+  const valid = metrics.side === desiredSide;
+  const inBuffer = metrics.perpendicularDistance <= cfg.lineBuffer;
 
-  el.distanceToLine.textContent = `${fmt(absDist, 0)} m`;
+  el.distanceToLine.textContent = `${fmt(distance, 0)} m`;
   el.sideText.textContent = valid ? t('goodSide') : t('wrongSide');
 
   if (!Number.isFinite(remaining) || remaining <= 0) {
     el.targetLine.textContent = t('notSynced');
-    el.idealSpeed.textContent = fmtSpeed(null);
+    el.fixedTarget.textContent = t('notSynced');
+    el.idealSpeed.textContent = '--';
     setStatus('---', '');
     return;
   }
 
   if (!valid && !inBuffer) {
     el.targetLine.textContent = t('returnSide');
-    el.idealSpeed.textContent = fmtSpeed(null);
+    el.fixedTarget.textContent = t('returnSide');
+    el.idealSpeed.textContent = '--';
     setStatus(t('return'), 'bad');
     return;
   }
 
   const target = targetSecondsRemaining(remaining);
   const secondsToTarget = remaining - target;
-  const idealMps = secondsToTarget > 1 ? absDist / secondsToTarget : null;
+  const idealMps = secondsToTarget > 1 ? distance / secondsToTarget : null;
 
-  el.targetLine.textContent = `${t('target')} : ${fmtTimer(target)} | ${t('availableTime')} : ${fmt(secondsToTarget, 0)} s`;
-  el.idealSpeed.textContent = fmtSpeed(idealMps);
+  const line = `${t('target')} : ${fmtTimer(target)} | ${t('availableTime')} : ${fmt(secondsToTarget, 0)} s`;
+  el.targetLine.textContent = line;
+  el.fixedTarget.textContent = line;
+  el.idealSpeed.textContent = idealMps === null ? '--' : speedLabel(idealMps);
 
-  if (!Number.isFinite(idealMps) || currentPos.speedMps === null) {
+  const currentMps = currentPos.speedMps;
+  if (idealMps === null || currentMps === null) {
     setStatus(t('calc'), 'warn');
   } else {
-    const delta = speedFromMps(idealMps) - speedFromMps(currentPos.speedMps);
-    const tolerance = el.speedUnit.value === 'mph' ? 0.45 : 0.4;
-    if (Math.abs(delta) <= tolerance) setStatus(t('ok'), 'ok');
+    const delta = idealMps - currentMps;
+    if (Math.abs(delta) <= 0.2) setStatus(t('ok'), 'ok');
     else if (delta > 0) setStatus(t('accelerate'), 'warn');
     else setStatus(t('slowDown'), 'bad');
   }
-}
-
-function setStatus(text, cls) {
-  el.speedStatus.textContent = text;
-  el.statusCard.className = `card status ${cls}`.trim();
 }
 
 function startGps() {
@@ -317,7 +314,6 @@ function startGps() {
   }
 
   if (watchId !== null) navigator.geolocation.clearWatch(watchId);
-
   el.gpsBadge.textContent = t('gpsStarting');
   el.gpsBadge.className = 'badge warn';
 
@@ -349,14 +345,16 @@ function syncFiveMinutes() {
   updateCalculations();
 }
 
-function armOfficialStart() {
-  if (!el.officialStartTime.value) return;
-  const [hh, mm, ss = '0'] = el.officialStartTime.value.split(':').map(Number);
+function armOfficialStartTime() {
+  const value = el.officialStartTime.value;
+  if (!value) return;
+  const [hh = '0', mm = '0', ss = '0'] = value.split(':');
   const d = new Date();
-  d.setHours(hh, mm, ss, 0);
+  d.setHours(Number(hh), Number(mm), Number(ss), 0);
   startTimeMs = d.getTime();
   lastSignalSecond = null;
-  beep(760, 120);
+  saveConfig();
+  beep(880, 120);
   updateCalculations();
 }
 
@@ -364,7 +362,9 @@ function resetCountdown() {
   startTimeMs = null;
   lastSignalSecond = null;
   el.timer.textContent = '--:--';
+  el.fixedTimer.textContent = '--:--';
   el.targetLine.textContent = t('targetEmpty');
+  el.fixedTarget.textContent = t('targetEmpty');
   updateCalculations();
 }
 
@@ -381,19 +381,22 @@ function useCurrentAs(point) {
   updateCalculations();
 }
 
-el.startGpsBtn.addEventListener('click', startGps);
-el.syncBtn.addEventListener('click', syncFiveMinutes);
-el.resetBtn.addEventListener('click', resetCountdown);
-el.armStartBtn.addEventListener('click', armOfficialStart);
-el.setABtn.addEventListener('click', () => useCurrentAs('A'));
-el.setBBtn.addEventListener('click', () => useCurrentAs('B'));
-el.saveBtn.addEventListener('click', () => { saveConfig(); beep(660, 90); updateCalculations(); });
-el.languageSelect.addEventListener('change', () => loadLanguage(el.languageSelect.value));
+function wireEvents() {
+  el.startGpsBtn.addEventListener('click', startGps);
+  el.syncBtn.addEventListener('click', syncFiveMinutes);
+  el.resetBtn.addEventListener('click', resetCountdown);
+  el.armStartBtn.addEventListener('click', armOfficialStartTime);
+  el.setABtn.addEventListener('click', () => useCurrentAs('A'));
+  el.setBBtn.addEventListener('click', () => useCurrentAs('B'));
+  el.saveBtn.addEventListener('click', () => { saveConfig(); beep(660, 90); updateCalculations(); });
+  el.languageSelect.addEventListener('change', () => loadLanguage(el.languageSelect.value));
 
-for (const input of [el.latA, el.lonA, el.latB, el.lonB, el.buoySide, el.lineBuffer, el.speedUnit]) {
-  input.addEventListener('change', () => { saveConfig(); updateCalculations(); });
+  for (const input of [el.latA, el.lonA, el.latB, el.lonB, el.buoySide, el.lineBuffer, el.speedUnit, el.distanceMode, el.officialStartTime]) {
+    input.addEventListener('change', () => { saveConfig(); updateCalculations(); });
+  }
 }
 
 loadConfig();
-loadLanguage(currentLang);
+wireEvents();
+loadLanguage(lang);
 setInterval(updateCalculations, 250);

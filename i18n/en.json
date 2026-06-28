@@ -1,5 +1,5 @@
 {
-  "appSubtitle": "GPS starting aid for regattas",
+  "appSubtitle": "GAP aid for regatta starts",
   "gpsOff": "GPS OFF",
   "gpsStarting": "GPS...",
   "gpsDenied": "GPS DENIED",
@@ -41,7 +41,7 @@
   "buffer": "Line buffer, meters",
   "saveConfig": "Save configuration",
   "notes": "Notes",
-  "notesText": "V1 without map. A = committee boat, B = buoy. The calculation uses perpendicular distance to line A-B. Phone GPS can vary by several meters. Speed can be displayed in knots or miles/hour for debugging.",
+  "notesText": "Perpendicular mode measures the real gap to line A-B. Center mode measures distance to the middle of the line, useful for comparison/debugging. Phone GPS can vary by several meters.",
   "language": "Language",
   "waitingGps": "Waiting for GPS",
   "enterLine": "Enter line A-B",
@@ -56,5 +56,9 @@
   "accelerate": "ACCELERATE",
   "slowDown": "SLOW DOWN",
   "ok": "OK",
-  "guide": "Guide"
+  "guide": "Guide",
+  "startCountdown": "Start in",
+  "distanceMode": "Distance mode",
+  "distancePerpendicular": "Perpendicular to line",
+  "distanceCenter": "Line center"
 }

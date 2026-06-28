@@ -4,16 +4,23 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#07111f" />
-  <title>Regataide Start</title>
+  <title>Regataide Start2</title>
   <link rel="stylesheet" href="style.css" />
   <link rel="manifest" href="manifest.json" />
 </head>
 <body>
   <header class="topbar">
-    <div>
-      <h1>Regataide Start</h1>
-      <p data-i18n="appSubtitle">Aide GPS pour départ de régate</p>
+    <div class="brand-block">
+      <h1>Regataide Start2</h1>
+      <p data-i18n="appSubtitle">Aide GAP pour départ de régate</p>
     </div>
+
+    <div class="header-clock" aria-label="Compte à rebours départ">
+      <span data-i18n="startCountdown">Départ dans</span>
+      <strong id="fixedTimer">--:--</strong>
+      <small id="fixedTarget">Cible : --</small>
+    </div>
+
     <div class="top-actions">
       <a id="guideLink" class="guide-link" href="guide-fr.html" data-i18n="guide">Guide</a>
       <label class="language-label"><span data-i18n="language">Langue</span>
@@ -57,12 +64,20 @@
         </label>
         <button id="armStartBtn" class="primary" data-i18n="armThisTime">Armer cette heure</button>
       </div>
-      <label class="compact-label"><span data-i18n="speedUnit">Unité vitesse</span>
-        <select id="speedUnit">
-          <option value="knots" data-i18n="knots">Nœuds</option>
-          <option value="mph" data-i18n="mph">Milles/heure</option>
-        </select>
-      </label>
+      <div class="settings-grid">
+        <label class="compact-label"><span data-i18n="speedUnit">Unité vitesse</span>
+          <select id="speedUnit">
+            <option value="knots" data-i18n="knots">Nœuds</option>
+            <option value="mph" data-i18n="mph">Milles/heure</option>
+          </select>
+        </label>
+        <label class="compact-label"><span data-i18n="distanceMode">Mode distance</span>
+          <select id="distanceMode">
+            <option value="perpendicular" data-i18n="distancePerpendicular">Perpendiculaire à la ligne</option>
+            <option value="center" data-i18n="distanceCenter">Centre de la ligne</option>
+          </select>
+        </label>
+      </div>
       <p class="hint" data-i18n="clockHint">SYNC 5:00 règle automatiquement le départ à maintenant + 5 minutes. L’heure officielle permet d’entrer un départ précis.</p>
     </section>
 
@@ -132,7 +147,7 @@
 
     <section class="panel notes">
       <h2 data-i18n="notes">Notes</h2>
-      <p data-i18n="notesText">V1 sans carte. A = bateau comité, B = bouée. Le calcul utilise la distance perpendiculaire à la ligne A-B. Le GPS du téléphone peut varier de plusieurs mètres. L’unité de vitesse peut être affichée en nœuds ou en milles/heure pour faciliter le débogage.</p>
+      <p data-i18n="notesText">Le mode perpendiculaire mesure le gap réel jusqu’à la ligne A-B. Le mode centre mesure la distance jusqu’au milieu de la ligne, utile pour comparer/debugger.</p>
     </section>
   </main>
 

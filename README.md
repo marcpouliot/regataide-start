@@ -1,4 +1,4 @@
-# Regataide Start V1
+# Regataide Start2 V1
 
 Aide GPS pour départ de régate. Application web/PWA indépendante de Regataide.
 
@@ -8,7 +8,7 @@ Aide GPS pour départ de régate. Application web/PWA indépendante de Regataide
 - Ligne de départ : A = bateau comité, B = bouée
 - Passage de la bouée à bâbord ou à tribord
 - SYNC 5:00 ou heure officielle de départ
-- Distance à la ligne
+- Distance à la ligne : mode perpendiculaire ou centre de ligne
 - Vitesse actuelle
 - Vitesse idéale vers la prochaine minute pile
 - Affichage en nœuds ou milles/heure
