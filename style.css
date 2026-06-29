@@ -30,19 +30,11 @@ header {
   top: 0;
   background: rgba(7,17,31,.95);
   backdrop-filter: blur(8px);
-  z-index: 1000;
+  z-index: 2;
 }
 
 h1, h2, p { margin: 0; }
 h1 { font-size: 1.25rem; }
-.brand-block { min-width: 0; }
-.top-actions { display: flex; align-items: flex-start; gap: .6rem; flex-wrap: wrap; justify-content: flex-end; }
-.guide-link { color: var(--text); text-decoration: none; background: var(--card); border: 1px solid var(--border); padding: .45rem .65rem; border-radius: 999px; font-weight: 700; }
-.language-label { margin: 0; display: grid; gap: .2rem; font-size: .8rem; }
-.language-label select { margin: 0; padding: .35rem .5rem; border-radius: 999px; }
-.header-clock { flex: 0 0 auto; text-align: center; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: .55rem .8rem; min-width: 142px; }
-.header-clock span, .header-clock small { display: block; color: var(--muted); font-size: .75rem; }
-.header-clock strong { display: block; font-size: 1.8rem; line-height: 1; letter-spacing: -.04em; }
 h2 { font-size: 1rem; margin-bottom: .75rem; }
 p, span, label { color: var(--muted); }
 
@@ -77,9 +69,6 @@ main {
   margin-top: 1rem;
 }
 .line-actions { grid-template-columns: 1fr 1fr; }
-.clock-row, .start-grid, .settings-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: .75rem; }
-.clock-row > div { background: var(--card); border-radius: 12px; padding: .75rem; }
-.clock-row strong { display: block; color: var(--text); margin-top: .25rem; font-size: 1.25rem; }
 
 button, input, select {
   width: 100%;
@@ -153,56 +142,132 @@ label {
 .badge.warn { background: rgba(255,206,74,.18); color: var(--warn); }
 .notes p { line-height: 1.45; }
 
-@media (max-width: 680px) {
-  header { display: grid; grid-template-columns: 1fr; }
-  .header-clock { order: -1; width: 100%; }
-  .top-actions { justify-content: flex-start; }
-}
-
 @media (max-width: 520px) {
-  .controls, .grid, .rows, .clock-row, .start-grid, .settings-grid { grid-template-columns: 1fr; }
+  .controls, .grid, .rows { grid-template-columns: 1fr; }
   header { align-items: flex-start; }
 }
 
-.section-head {
+.topbar {
+  align-items: center;
+  z-index: 1000;
+}
+.brand-block { min-width: 0; }
+.header-clock {
+  min-width: 150px;
+  text-align: center;
+  padding: .55rem .75rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--card);
+}
+.header-clock span,
+.header-clock small {
+  display: block;
+  color: var(--muted);
+  font-size: .75rem;
+}
+.header-clock strong {
+  display: block;
+  font-size: 1.55rem;
+  line-height: 1.1;
+  color: var(--text);
+}
+.top-actions {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: .55rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.language-label {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+}
+.language-label select {
+  width: auto;
+  margin-top: 0;
+  padding: .35rem .55rem;
+}
+.guide-link {
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 800;
+  padding: .35rem .6rem;
+  border-radius: 999px;
+  background: var(--card);
+  border: 1px solid var(--border);
+}
+.clock-row,
+.start-grid,
+.settings-grid,
+.section-head {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: .75rem;
+  align-items: end;
+}
+.clock-row strong {
+  display: block;
+  margin-top: .25rem;
+  font-size: 1.4rem;
+}
+.section-head {
+  grid-template-columns: 1fr auto;
   margin-bottom: .75rem;
 }
-.section-head h2 { margin-bottom: 0; }
 .small-button {
   width: auto;
-  padding: .55rem .8rem;
-  border-radius: 999px;
-  font-size: .9rem;
+  padding: .5rem .75rem;
 }
-.map-panel { padding: .75rem; }
 .map {
-  height: min(58vh, 440px);
-  min-height: 280px;
+  width: 100%;
+  height: min(58vh, 460px);
+  min-height: 320px;
   border-radius: 16px;
   overflow: hidden;
   border: 1px solid var(--border);
   background: #0b1627;
 }
-.map-panel .hint {
-  margin-top: .6rem;
-  line-height: 1.35;
+.map-panel { overflow: hidden; }
+.hint {
+  margin-top: .75rem;
+  line-height: 1.45;
+  color: var(--muted);
 }
 .leaflet-container {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #0b1627;
 }
-.leaflet-control-attribution {
-  font-size: 10px;
+.map-label {
+  font-weight: 800;
+  border: 0;
+  border-radius: 999px;
+  padding: .2rem .45rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,.22);
 }
-.leaflet-tooltip {
-  background: rgba(7,17,31,.92);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  font-weight: 700;
-  box-shadow: none;
+
+@media (max-width: 720px) {
+  .topbar {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+  .top-actions {
+    justify-content: flex-start;
+  }
+  .header-clock {
+    text-align: left;
+  }
+}
+
+@media (max-width: 520px) {
+  .clock-row,
+  .start-grid,
+  .settings-grid,
+  .section-head {
+    grid-template-columns: 1fr;
+  }
+  .map {
+    min-height: 300px;
+  }
 }

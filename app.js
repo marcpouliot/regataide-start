@@ -11,28 +11,25 @@ let currentPos = null;
 let startTimeMs = null;
 let lastSignalSecond = null;
 let audioCtx = null;
-let translations = {};
 let lang = localStorage.getItem('regataide-start-lang') || 'fr';
+let dict = {};
 
 let map = null;
-let mapHasCentered = false;
-const mapLayers = {
-  boat: null,
-  accuracy: null,
-  startLine: null,
-  committee: null,
-  buoy: null,
-  center: null,
-  gap: null,
-  gapLine: null,
-};
+let mapReady = false;
+let mapCenteredOnce = false;
+let boatMarker = null;
+let accuracyCircle = null;
+let committeeMarker = null;
+let buoyMarker = null;
+let centerMarker = null;
+let gapMarker = null;
+let startLineLayer = null;
+let gapLineLayer = null;
 
 const $ = (id) => document.getElementById(id);
 
 const el = {
   gpsBadge: $('gpsBadge'),
-  guideLink: $('guideLink'),
-  languageSelect: $('languageSelect'),
   fixedTimer: $('fixedTimer'),
   fixedTarget: $('fixedTarget'),
   currentClock: $('currentClock'),
@@ -64,39 +61,44 @@ const el = {
   setABtn: $('setABtn'),
   setBBtn: $('setBBtn'),
   saveBtn: $('saveBtn'),
-  map: $('map'),
-  mapStatus: $('mapStatus'),
+  languageSelect: $('languageSelect'),
+  guideLink: $('guideLink'),
   centerMapBtn: $('centerMapBtn'),
+  mapStatus: $('mapStatus'),
 };
 
-function t(key) {
-  return translations[key] || key;
+function t(key, fallback = key) {
+  return dict[key] || fallback;
 }
 
 async function loadLanguage(nextLang = lang) {
   lang = nextLang;
   localStorage.setItem('regataide-start-lang', lang);
   document.documentElement.lang = lang;
-  el.languageSelect.value = lang;
-  el.guideLink.href = lang === 'en' ? 'guide-en.html' : 'guide-fr.html';
+  if (el.languageSelect) el.languageSelect.value = lang;
+  if (el.guideLink) el.guideLink.href = lang === 'en' ? 'guide-en.html' : 'guide-fr.html';
 
   try {
     const res = await fetch(`i18n/${lang}.json`, { cache: 'no-store' });
-    translations = await res.json();
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    dict = await res.json();
   } catch {
-    translations = {};
+    dict = {};
   }
 
   document.querySelectorAll('[data-i18n]').forEach((node) => {
     const key = node.getAttribute('data-i18n');
-    if (translations[key]) node.textContent = translations[key];
+    if (dict[key]) node.textContent = dict[key];
   });
-
-  updateGpsBadge();
+  refreshStaticLabels();
   updateGpsDisplay();
-  initMap();
   updateCalculations();
-  updateMap();
+}
+
+function refreshStaticLabels() {
+  if (!currentPos && el.gpsBadge) {
+    el.gpsBadge.textContent = t('gpsOff', 'GPS OFF');
+  }
 }
 
 function num(value) {
@@ -108,245 +110,139 @@ function fmt(n, decimals = 0) {
   return Number.isFinite(n) ? n.toFixed(decimals) : '--';
 }
 
-function fmtTime(ms) {
-  if (!Number.isFinite(ms)) return '--:--:--';
-  return new Date(ms).toLocaleTimeString(lang === 'en' ? 'en-CA' : 'fr-CA', {
-    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
-  });
-}
-
 function fmtTimer(seconds) {
   if (!Number.isFinite(seconds)) return '--:--';
-  const sign = seconds < 0 ? '+' : '';
-  const s = Math.abs(Math.ceil(seconds));
+  const s = Math.max(0, Math.ceil(seconds));
   const m = Math.floor(s / 60);
   const r = s % 60;
-  return `${sign}${m}:${String(r).padStart(2, '0')}`;
+  return `${m}:${String(r).padStart(2, '0')}`;
 }
 
-function speedLabel(mps) {
-  if (!Number.isFinite(mps)) return '--';
-  if (el.speedUnit.value === 'mph') return `${fmt(mps * MPH_PER_MPS, 1)} mph`;
-  return `${fmt(mps * KNOTS_PER_MPS, 1)} nds`;
+function fmtClock(ms) {
+  if (!Number.isFinite(ms)) return '--:--:--';
+  return new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+function getSpeedUnit() {
+  return el.speedUnit?.value || 'knots';
+}
+
+function unitLabel() {
+  return getSpeedUnit() === 'mph' ? 'mph' : (lang === 'en' ? 'kt' : 'nds');
+}
+
+function speedFactor() {
+  return getSpeedUnit() === 'mph' ? MPH_PER_MPS : KNOTS_PER_MPS;
+}
+
+function fmtSpeed(mps, decimals = 1) {
+  if (!Number.isFinite(mps)) return `-- ${unitLabel()}`;
+  return `${fmt(mps * speedFactor(), decimals)} ${unitLabel()}`;
 }
 
 function getConfig() {
   return {
-    latA: num(el.latA.value),
-    lonA: num(el.lonA.value),
-    latB: num(el.latB.value),
-    lonB: num(el.lonB.value),
-    buoySide: el.buoySide.value,
-    lineBuffer: Math.max(1, num(el.lineBuffer.value) ?? 10),
-    speedUnit: el.speedUnit.value,
-    distanceMode: el.distanceMode.value,
+    latA: num(el.latA?.value),
+    lonA: num(el.lonA?.value),
+    latB: num(el.latB?.value),
+    lonB: num(el.lonB?.value),
+    buoySide: el.buoySide?.value || 'port',
+    lineBuffer: Math.max(1, num(el.lineBuffer?.value) ?? 10),
+    speedUnit: getSpeedUnit(),
+    distanceMode: el.distanceMode?.value || 'perpendicular',
   };
 }
 
 function saveConfig() {
+  const cfg = getConfig();
   localStorage.setItem(STORAGE_KEY, JSON.stringify({
-    latA: el.latA.value,
-    lonA: el.lonA.value,
-    latB: el.latB.value,
-    lonB: el.lonB.value,
-    buoySide: el.buoySide.value,
-    lineBuffer: el.lineBuffer.value,
-    speedUnit: el.speedUnit.value,
-    distanceMode: el.distanceMode.value,
-    officialStartTime: el.officialStartTime.value,
+    latA: el.latA?.value || '',
+    lonA: el.lonA?.value || '',
+    latB: el.latB?.value || '',
+    lonB: el.lonB?.value || '',
+    buoySide: cfg.buoySide,
+    lineBuffer: el.lineBuffer?.value || '10',
+    speedUnit: cfg.speedUnit,
+    distanceMode: cfg.distanceMode,
+    lang,
   }));
 }
 
 function loadConfig() {
   try {
     const cfg = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-    for (const key of ['latA', 'lonA', 'latB', 'lonB', 'buoySide', 'lineBuffer', 'speedUnit', 'distanceMode', 'officialStartTime']) {
+    for (const key of ['latA', 'lonA', 'latB', 'lonB', 'buoySide', 'lineBuffer', 'speedUnit', 'distanceMode']) {
       if (cfg[key] !== undefined && el[key]) el[key].value = cfg[key];
     }
+    if (cfg.lang) lang = cfg.lang;
   } catch {}
 }
 
 function toLocalMeters(lat, lon, refLat, refLon) {
   const latRad = refLat * Math.PI / 180;
-  return {
-    x: (lon - refLon) * Math.PI / 180 * EARTH_RADIUS_M * Math.cos(latRad),
-    y: (lat - refLat) * Math.PI / 180 * EARTH_RADIUS_M,
-  };
+  const x = (lon - refLon) * Math.PI / 180 * EARTH_RADIUS_M * Math.cos(latRad);
+  const y = (lat - refLat) * Math.PI / 180 * EARTH_RADIUS_M;
+  return { x, y };
 }
 
-function metersToLatLon(x, y, refLat, refLon) {
-  const latRad = refLat * Math.PI / 180;
-  return {
-    lat: refLat + (y / EARTH_RADIUS_M) * 180 / Math.PI,
-    lon: refLon + (x / (EARTH_RADIUS_M * Math.cos(latRad))) * 180 / Math.PI,
-  };
+function localToLatLon(x, y, refLat, refLon) {
+  const lat = refLat + (y / EARTH_RADIUS_M) * 180 / Math.PI;
+  const lon = refLon + (x / (EARTH_RADIUS_M * Math.cos(refLat * Math.PI / 180))) * 180 / Math.PI;
+  return { lat, lon };
 }
 
-function lineMetrics(pos, cfg) {
+function haversineMeters(lat1, lon1, lat2, lon2) {
+  const p1 = lat1 * Math.PI / 180;
+  const p2 = lat2 * Math.PI / 180;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin(dLon / 2) ** 2;
+  return 2 * EARTH_RADIUS_M * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function signedDistanceToLine(pos, cfg) {
   const b = toLocalMeters(cfg.latB, cfg.lonB, cfg.latA, cfg.lonA);
   const p = toLocalMeters(pos.lat, pos.lon, cfg.latA, cfg.lonA);
   const len = Math.hypot(b.x, b.y);
   if (len < 1) return null;
-
   const cross = b.x * p.y - b.y * p.x;
-  const signed = cross / len;
+  return cross / len;
+}
+
+function distanceSolution(pos, cfg) {
+  const signed = signedDistanceToLine(pos, cfg);
+  if (signed === null) return null;
+
   const side = signed >= 0 ? 'left' : 'right';
+  const validSide = cfg.buoySide === 'port' ? 'left' : 'right';
+  const valid = side === validSide;
 
-  const center = { x: b.x / 2, y: b.y / 2 };
-  const centerLatLon = metersToLatLon(center.x, center.y, cfg.latA, cfg.lonA);
-  const centerDistance = Math.hypot(p.x - center.x, p.y - center.y);
+  const b = toLocalMeters(cfg.latB, cfg.lonB, cfg.latA, cfg.lonA);
+  const p = toLocalMeters(pos.lat, pos.lon, cfg.latA, cfg.lonA);
+  const len2 = b.x * b.x + b.y * b.y;
+  const rawT = len2 > 1 ? ((p.x * b.x + p.y * b.y) / len2) : 0.5;
+  const projected = localToLatLon(b.x * rawT, b.y * rawT, cfg.latA, cfg.lonA);
+  const center = { lat: (cfg.latA + cfg.latB) / 2, lon: (cfg.lonA + cfg.lonB) / 2 };
 
-  const projectionRatio = (p.x * b.x + p.y * b.y) / (len * len);
-  const projected = { x: b.x * projectionRatio, y: b.y * projectionRatio };
-  const projectedLatLon = metersToLatLon(projected.x, projected.y, cfg.latA, cfg.lonA);
+  if (cfg.distanceMode === 'center') {
+    return {
+      distanceM: haversineMeters(pos.lat, pos.lon, center.lat, center.lon),
+      signedM: signed,
+      side,
+      valid,
+      target: center,
+      center,
+    };
+  }
 
   return {
-    signed,
+    distanceM: Math.abs(signed),
+    signedM: signed,
     side,
-    perpendicularDistance: Math.abs(signed),
-    centerDistance,
-    centerLatLon,
-    projectedLatLon,
+    valid,
+    target: projected,
+    center,
   };
-}
-
-
-function initMap() {
-  if (!el.map || map) return;
-  if (!window.L) {
-    if (el.mapStatus) el.mapStatus.textContent = t('mapLeafletMissing');
-    return;
-  }
-
-  map = L.map(el.map, { zoomControl: true, attributionControl: true }).setView([45.4, -71.0], 12);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '&copy; OpenStreetMap contributors',
-  }).addTo(map);
-  setTimeout(() => map.invalidateSize(), 100);
-}
-
-function removeLayer(key) {
-  const layer = mapLayers[key];
-  if (map && layer) map.removeLayer(layer);
-  mapLayers[key] = null;
-}
-
-function setCircleLayer(key, latlng, label, options = {}) {
-  if (!map) return;
-  const style = Object.assign({
-    radius: 7,
-    weight: 3,
-    opacity: 1,
-    fillOpacity: 0.85,
-  }, options);
-
-  if (!mapLayers[key]) {
-    mapLayers[key] = L.circleMarker(latlng, style).addTo(map);
-  } else {
-    mapLayers[key].setLatLng(latlng);
-    mapLayers[key].setStyle(style);
-  }
-  mapLayers[key].bindTooltip(label, { permanent: false, direction: 'top' });
-}
-
-function fitMapToData() {
-  if (!map) return;
-  const cfg = getConfig();
-  const points = [];
-  if (currentPos) points.push([currentPos.lat, currentPos.lon]);
-  if ([cfg.latA, cfg.lonA].every(Number.isFinite)) points.push([cfg.latA, cfg.lonA]);
-  if ([cfg.latB, cfg.lonB].every(Number.isFinite)) points.push([cfg.latB, cfg.lonB]);
-
-  if (points.length === 1) map.setView(points[0], 16);
-  if (points.length > 1) map.fitBounds(points, { padding: [35, 35], maxZoom: 18 });
-  mapHasCentered = true;
-  setTimeout(() => map.invalidateSize(), 50);
-}
-
-function updateMap() {
-  if (!map) return;
-
-  const cfg = getConfig();
-  const hasLine = [cfg.latA, cfg.lonA, cfg.latB, cfg.lonB].every(Number.isFinite);
-  let status = t('mapWaiting');
-
-  if (currentPos) {
-    const boatLatLng = [currentPos.lat, currentPos.lon];
-    setCircleLayer('boat', boatLatLng, t('boatPosition'), {
-      color: '#4db6ff', fillColor: '#4db6ff', radius: 8,
-    });
-
-    if (!mapLayers.accuracy) {
-      mapLayers.accuracy = L.circle(boatLatLng, {
-        radius: Math.max(1, currentPos.accuracy || 1),
-        color: '#4db6ff', fillColor: '#4db6ff', fillOpacity: 0.08, weight: 1,
-      }).addTo(map);
-    } else {
-      mapLayers.accuracy.setLatLng(boatLatLng);
-      mapLayers.accuracy.setRadius(Math.max(1, currentPos.accuracy || 1));
-    }
-    status = `GPS ±${fmt(currentPos.accuracy, 0)} m`;
-  } else {
-    removeLayer('boat');
-    removeLayer('accuracy');
-  }
-
-  if (hasLine) {
-    const a = [cfg.latA, cfg.lonA];
-    const b = [cfg.latB, cfg.lonB];
-    if (!mapLayers.startLine) {
-      mapLayers.startLine = L.polyline([a, b], { color: '#ffffff', weight: 4, opacity: 0.9 }).addTo(map);
-    } else {
-      mapLayers.startLine.setLatLngs([a, b]);
-    }
-
-    setCircleLayer('committee', a, t('committeeBoat'), { color: '#ffce4a', fillColor: '#ffce4a', radius: 7 });
-    setCircleLayer('buoy', b, t('startingBuoy'), { color: '#ff5d5d', fillColor: '#ff5d5d', radius: 7 });
-
-    const metricsForCenter = currentPos ? lineMetrics(currentPos, cfg) : null;
-    let centerLatLon;
-    if (metricsForCenter) {
-      centerLatLon = metricsForCenter.centerLatLon;
-    } else {
-      centerLatLon = {
-        lat: (cfg.latA + cfg.latB) / 2,
-        lon: (cfg.lonA + cfg.lonB) / 2,
-      };
-    }
-    setCircleLayer('center', [centerLatLon.lat, centerLatLon.lon], t('lineCenter'), {
-      color: '#c58cff', fillColor: '#c58cff', radius: 5,
-    });
-
-    if (currentPos) {
-      const metrics = lineMetrics(currentPos, cfg);
-      if (metrics) {
-        const target = cfg.distanceMode === 'center' ? metrics.centerLatLon : metrics.projectedLatLon;
-        const targetLatLng = [target.lat, target.lon];
-        setCircleLayer('gap', targetLatLng, t('gapTarget'), {
-          color: '#36d17c', fillColor: '#36d17c', radius: 6,
-        });
-        const boatLatLng = [currentPos.lat, currentPos.lon];
-        if (!mapLayers.gapLine) {
-          mapLayers.gapLine = L.polyline([boatLatLng, targetLatLng], {
-            color: '#36d17c', weight: 2, opacity: 0.8, dashArray: '6 6',
-          }).addTo(map);
-        } else {
-          mapLayers.gapLine.setLatLngs([boatLatLng, targetLatLng]);
-        }
-        status = `${status} · ${cfg.distanceMode === 'center' ? t('distanceCenter') : t('distancePerpendicular')}`;
-      }
-    } else {
-      removeLayer('gap');
-      removeLayer('gapLine');
-    }
-  } else {
-    for (const key of ['startLine', 'committee', 'buoy', 'center', 'gap', 'gapLine']) removeLayer(key);
-  }
-
-  if (el.mapStatus) el.mapStatus.textContent = status;
-
-  if (!mapHasCentered && (currentPos || hasLine)) fitMapToData();
 }
 
 function targetSecondsRemaining(remaining) {
@@ -376,118 +272,244 @@ function playSignal(remainingCeil) {
   if ([300, 240, 60, 0].includes(remainingCeil)) {
     lastSignalSecond = remainingCeil;
     const count = remainingCeil === 0 ? 3 : 1;
-    for (let i = 0; i < count; i++) setTimeout(() => beep(remainingCeil === 0 ? 1200 : 880, 180), i * 250);
+    for (let i = 0; i < count; i++) {
+      setTimeout(() => beep(remainingCeil === 0 ? 1200 : 880, 180), i * 250);
+    }
   }
-}
-
-function updateGpsBadge() {
-  if (!currentPos) {
-    el.gpsBadge.textContent = t('gpsOff');
-    el.gpsBadge.className = 'badge bad';
-    return;
-  }
-  el.gpsBadge.textContent = `GPS ±${fmt(currentPos.accuracy, 0)} m`;
-  el.gpsBadge.className = currentPos.accuracy <= 10 ? 'badge good' : 'badge warn';
 }
 
 function updateGpsDisplay() {
-  if (!currentPos) return;
+  if (!currentPos) {
+    if (el.currentSpeed) el.currentSpeed.textContent = `-- ${unitLabel()}`;
+    return;
+  }
   el.lat.textContent = currentPos.lat.toFixed(7);
   el.lon.textContent = currentPos.lon.toFixed(7);
   el.accuracy.textContent = `${fmt(currentPos.accuracy, 0)} m`;
-  el.currentSpeed.textContent = currentPos.speedMps === null ? '--' : speedLabel(currentPos.speedMps);
+  el.currentSpeed.textContent = fmtSpeed(currentPos.speedMps, 1);
 }
 
-function setStatus(text, cls) {
-  el.speedStatus.textContent = text;
-  el.statusCard.className = `card status ${cls}`.trim();
+function updateClocks() {
+  const now = Date.now();
+  el.currentClock.textContent = fmtClock(now);
+  el.startClock.textContent = startTimeMs === null ? '--:--:--' : fmtClock(startTimeMs);
 }
 
 function updateCalculations() {
-  const now = Date.now();
-  el.currentClock.textContent = fmtTime(now);
-  el.startClock.textContent = startTimeMs ? fmtTime(startTimeMs) : '--:--:--';
+  updateClocks();
 
+  const now = Date.now();
   const remaining = startTimeMs === null ? null : (startTimeMs - now) / 1000;
   const timerText = fmtTimer(remaining);
   el.timer.textContent = timerText;
   el.fixedTimer.textContent = timerText;
 
-  if (Number.isFinite(remaining) && remaining >= -2) {
-    playSignal(Math.max(0, Math.ceil(remaining)));
-  }
+  if (Number.isFinite(remaining)) playSignal(Math.max(0, Math.ceil(remaining)));
 
   const cfg = getConfig();
   const hasLine = [cfg.latA, cfg.lonA, cfg.latB, cfg.lonB].every(Number.isFinite);
-  updateMap();
+
+  let targetText = t('targetEmpty', 'Cible : --');
 
   if (!currentPos || !hasLine) {
     el.distanceToLine.textContent = '-- m';
-    el.idealSpeed.textContent = '--';
-    el.sideText.textContent = '--';
+    el.idealSpeed.textContent = `-- ${unitLabel()}`;
     setStatus('---', '');
-    const msg = hasLine ? t('waitingGps') : t('enterLine');
-    el.targetLine.textContent = msg;
-    el.fixedTarget.textContent = msg;
+    targetText = hasLine ? t('waitingGps', 'En attente GPS') : t('enterLine', 'Entrer la ligne A-B');
+    el.targetLine.textContent = targetText;
+    el.fixedTarget.textContent = targetText;
+    updateMap();
     return;
   }
 
-  const metrics = lineMetrics(currentPos, cfg);
-  if (!metrics) return;
+  const solution = distanceSolution(currentPos, cfg);
+  if (!solution) return;
 
-  const distance = cfg.distanceMode === 'center' ? metrics.centerDistance : metrics.perpendicularDistance;
-  const desiredSide = cfg.buoySide === 'port' ? 'right' : 'left';
-  const valid = metrics.side === desiredSide;
-  const inBuffer = metrics.perpendicularDistance <= cfg.lineBuffer;
-
-  el.distanceToLine.textContent = `${fmt(distance, 0)} m`;
-  el.sideText.textContent = valid ? t('goodSide') : t('wrongSide');
+  const inBuffer = solution.distanceM <= cfg.lineBuffer;
+  el.distanceToLine.textContent = `${fmt(solution.distanceM, 0)} m`;
+  el.sideText.textContent = solution.valid ? t('goodSide', 'Pré-départ OK') : t('wrongSide', 'Côté course / ligne franchie');
 
   if (!Number.isFinite(remaining) || remaining <= 0) {
-    el.targetLine.textContent = t('notSynced');
-    el.fixedTarget.textContent = t('notSynced');
-    el.idealSpeed.textContent = '--';
+    targetText = t('notSynced', 'Départ non synchronisé ou terminé');
+    el.targetLine.textContent = targetText;
+    el.fixedTarget.textContent = targetText;
+    el.idealSpeed.textContent = `-- ${unitLabel()}`;
     setStatus('---', '');
+    updateMap(solution);
     return;
   }
 
-  if (!valid && !inBuffer) {
-    el.targetLine.textContent = t('returnSide');
-    el.fixedTarget.textContent = t('returnSide');
-    el.idealSpeed.textContent = '--';
-    setStatus(t('return'), 'bad');
+  if (!solution.valid && !inBuffer) {
+    targetText = t('returnSide', 'Revenir du bon côté de la ligne');
+    el.targetLine.textContent = targetText;
+    el.fixedTarget.textContent = targetText;
+    el.idealSpeed.textContent = `-- ${unitLabel()}`;
+    setStatus(t('return', 'REVENIR'), 'bad');
+    updateMap(solution);
     return;
   }
 
   const target = targetSecondsRemaining(remaining);
   const secondsToTarget = remaining - target;
-  const idealMps = secondsToTarget > 1 ? distance / secondsToTarget : null;
+  const idealMps = secondsToTarget > 1 ? solution.distanceM / secondsToTarget : null;
 
-  const line = `${t('target')} : ${fmtTimer(target)} | ${t('availableTime')} : ${fmt(secondsToTarget, 0)} s`;
-  el.targetLine.textContent = line;
-  el.fixedTarget.textContent = line;
-  el.idealSpeed.textContent = idealMps === null ? '--' : speedLabel(idealMps);
+  targetText = `${t('target', 'Cible')} : ${fmtTimer(target)} | ${t('availableTime', 'temps dispo')} : ${fmt(secondsToTarget, 0)} s`;
+  el.targetLine.textContent = targetText;
+  el.fixedTarget.textContent = targetText;
+  el.idealSpeed.textContent = fmtSpeed(idealMps, 1);
 
-  const currentMps = currentPos.speedMps;
-  if (idealMps === null || currentMps === null) {
-    setStatus(t('calc'), 'warn');
+  if (!Number.isFinite(idealMps) || !Number.isFinite(currentPos.speedMps)) {
+    setStatus(t('calc', 'CALCUL'), 'warn');
   } else {
-    const delta = idealMps - currentMps;
-    if (Math.abs(delta) <= 0.2) setStatus(t('ok'), 'ok');
-    else if (delta > 0) setStatus(t('accelerate'), 'warn');
-    else setStatus(t('slowDown'), 'bad');
+    const deltaMps = idealMps - currentPos.speedMps;
+    const toleranceMps = getSpeedUnit() === 'mph' ? 0.2 : 0.205; // roughly 0.4 kt
+    if (Math.abs(deltaMps) <= toleranceMps) setStatus(t('ok', 'OK'), 'ok');
+    else if (deltaMps > 0) setStatus(t('accelerate', 'ACCÉLÉRER'), 'warn');
+    else setStatus(t('slowDown', 'RALENTIR'), 'bad');
+  }
+
+  updateMap(solution);
+}
+
+function setStatus(text, cls) {
+  el.speedStatus.textContent = text;
+  el.statusCard.className = `card status ${cls || ''}`.trim();
+}
+
+function initMap() {
+  if (!window.L || !$('map')) {
+    if (el.mapStatus) el.mapStatus.textContent = t('mapUnavailable', 'Carte non disponible.');
+    return;
+  }
+
+  map = L.map('map', { zoomControl: true });
+  map.setView([45.5, -71.0], 11);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 20,
+    attribution: '&copy; OpenStreetMap',
+  }).addTo(map);
+  mapReady = true;
+  updateMap();
+}
+
+function setCircleMarker(existing, latlng, options, tooltip) {
+  if (!mapReady) return null;
+  if (!existing) {
+    existing = L.circleMarker(latlng, options).addTo(map);
+    if (tooltip) existing.bindTooltip(tooltip, { permanent: true, direction: 'top', offset: [0, -8], className: 'map-label' });
+  } else {
+    existing.setLatLng(latlng);
+    if (tooltip && existing.getTooltip()) existing.setTooltipContent(tooltip);
+  }
+  return existing;
+}
+
+function removeLayer(layer) {
+  if (layer && mapReady) map.removeLayer(layer);
+  return null;
+}
+
+function updateMap(solution = null) {
+  if (!mapReady) return;
+
+  const cfg = getConfig();
+  const hasLine = [cfg.latA, cfg.lonA, cfg.latB, cfg.lonB].every(Number.isFinite);
+
+  if (currentPos) {
+    const boatLatLng = [currentPos.lat, currentPos.lon];
+    boatMarker = setCircleMarker(boatMarker, boatLatLng, {
+      radius: 10,
+      weight: 3,
+      color: '#ffffff',
+      fillColor: '#1e90ff',
+      fillOpacity: 1,
+    }, t('boat', 'Bateau'));
+
+    if (!accuracyCircle) {
+      accuracyCircle = L.circle(boatLatLng, {
+        radius: currentPos.accuracy || 0,
+        weight: 1,
+        color: '#1e90ff',
+        fillColor: '#1e90ff',
+        fillOpacity: 0.08,
+      }).addTo(map);
+    } else {
+      accuracyCircle.setLatLng(boatLatLng);
+      accuracyCircle.setRadius(currentPos.accuracy || 0);
+    }
+
+    if (!mapCenteredOnce) {
+      map.setView(boatLatLng, 17);
+      mapCenteredOnce = true;
+    }
+  }
+
+  if (!hasLine) {
+    committeeMarker = removeLayer(committeeMarker);
+    buoyMarker = removeLayer(buoyMarker);
+    centerMarker = removeLayer(centerMarker);
+    gapMarker = removeLayer(gapMarker);
+    startLineLayer = removeLayer(startLineLayer);
+    gapLineLayer = removeLayer(gapLineLayer);
+    if (el.mapStatus) el.mapStatus.textContent = currentPos ? t('mapNeedLine', 'GPS OK. Entre ou capture la ligne A-B.') : t('mapWaiting', 'Carte prête. Active le GPS et entre la ligne A-B.');
+    return;
+  }
+
+  const a = [cfg.latA, cfg.lonA];
+  const b = [cfg.latB, cfg.lonB];
+  const center = solution?.center || { lat: (cfg.latA + cfg.latB) / 2, lon: (cfg.lonA + cfg.lonB) / 2 };
+
+  committeeMarker = setCircleMarker(committeeMarker, a, { radius: 8, weight: 2, color: '#ffffff', fillColor: '#ffce4a', fillOpacity: 1 }, t('committeeA', 'Comité A'));
+  buoyMarker = setCircleMarker(buoyMarker, b, { radius: 8, weight: 2, color: '#ffffff', fillColor: '#ff5d5d', fillOpacity: 1 }, t('buoyB', 'Bouée B'));
+  centerMarker = setCircleMarker(centerMarker, [center.lat, center.lon], { radius: 5, weight: 2, color: '#ffffff', fillColor: '#36d17c', fillOpacity: 0.9 }, t('center', 'Centre'));
+
+  if (!startLineLayer) {
+    startLineLayer = L.polyline([a, b], { weight: 4, color: '#ffce4a' }).addTo(map);
+  } else {
+    startLineLayer.setLatLngs([a, b]);
+  }
+
+  if (solution && currentPos) {
+    const gap = [solution.target.lat, solution.target.lon];
+    gapMarker = setCircleMarker(gapMarker, gap, { radius: 6, weight: 2, color: '#ffffff', fillColor: '#b56cff', fillOpacity: 1 }, t('gapPoint', 'Point GAP'));
+    const boat = [currentPos.lat, currentPos.lon];
+    if (!gapLineLayer) {
+      gapLineLayer = L.polyline([boat, gap], { weight: 3, color: '#b56cff', dashArray: '7 7' }).addTo(map);
+    } else {
+      gapLineLayer.setLatLngs([boat, gap]);
+    }
+  }
+
+  if (el.mapStatus) {
+    const modeText = cfg.distanceMode === 'center' ? t('distanceCenter', 'Centre de la ligne') : t('distancePerpendicular', 'Perpendiculaire à la ligne');
+    const sideText = cfg.buoySide === 'port' ? t('buoyPort', 'Bouée à bâbord') : t('buoyStarboard', 'Bouée à tribord');
+    el.mapStatus.textContent = `${modeText} · ${sideText}`;
+  }
+}
+
+function centerMap() {
+  if (!mapReady) return;
+  if (currentPos) {
+    map.setView([currentPos.lat, currentPos.lon], Math.max(map.getZoom(), 17));
+    return;
+  }
+  const cfg = getConfig();
+  if ([cfg.latA, cfg.lonA, cfg.latB, cfg.lonB].every(Number.isFinite)) {
+    const bounds = L.latLngBounds([[cfg.latA, cfg.lonA], [cfg.latB, cfg.lonB]]);
+    map.fitBounds(bounds.pad(0.4));
   }
 }
 
 function startGps() {
   if (!('geolocation' in navigator)) {
-    el.gpsBadge.textContent = t('gpsUnsupported');
+    el.gpsBadge.textContent = t('gpsUnsupported', 'GPS NON SUPPORTÉ');
     el.gpsBadge.className = 'badge bad';
     return;
   }
 
   if (watchId !== null) navigator.geolocation.clearWatch(watchId);
-  el.gpsBadge.textContent = t('gpsStarting');
+
+  el.gpsBadge.textContent = t('gpsStarting', 'GPS...');
   el.gpsBadge.className = 'badge warn';
 
   watchId = navigator.geolocation.watchPosition(
@@ -499,13 +521,14 @@ function startGps() {
         speedMps: Number.isFinite(p.coords.speed) ? p.coords.speed : null,
         heading: Number.isFinite(p.coords.heading) ? p.coords.heading : null,
       };
-      updateGpsBadge();
+      el.gpsBadge.textContent = `GPS ±${fmt(currentPos.accuracy, 0)} m`;
+      el.gpsBadge.className = currentPos.accuracy <= 10 ? 'badge good' : 'badge warn';
       updateGpsDisplay();
-      updateMap();
       updateCalculations();
+      updateMap();
     },
     (err) => {
-      el.gpsBadge.textContent = err.code === 1 ? t('gpsDenied') : t('gpsError');
+      el.gpsBadge.textContent = err.code === 1 ? t('gpsDenied', 'GPS REFUSÉ') : t('gpsError', 'GPS ERREUR');
       el.gpsBadge.className = 'badge bad';
     },
     { enableHighAccuracy: true, maximumAge: 1000, timeout: 15000 }
@@ -519,15 +542,16 @@ function syncFiveMinutes() {
   updateCalculations();
 }
 
-function armOfficialStartTime() {
-  const value = el.officialStartTime.value;
+function armOfficialStart() {
+  const value = el.officialStartTime?.value;
   if (!value) return;
-  const [hh = '0', mm = '0', ss = '0'] = value.split(':');
+  const [h, m, s = '0'] = value.split(':').map(Number);
   const d = new Date();
-  d.setHours(Number(hh), Number(mm), Number(ss), 0);
+  d.setHours(h, m, s, 0);
   startTimeMs = d.getTime();
+  // If this time has already passed today, assume the user means tomorrow.
+  if (startTimeMs < Date.now() - 1000) startTimeMs += 24 * 60 * 60 * 1000;
   lastSignalSecond = null;
-  saveConfig();
   beep(880, 120);
   updateCalculations();
 }
@@ -537,8 +561,8 @@ function resetCountdown() {
   lastSignalSecond = null;
   el.timer.textContent = '--:--';
   el.fixedTimer.textContent = '--:--';
-  el.targetLine.textContent = t('targetEmpty');
-  el.fixedTarget.textContent = t('targetEmpty');
+  el.targetLine.textContent = t('targetEmpty', 'Cible : --');
+  el.fixedTarget.textContent = t('targetEmpty', 'Cible : --');
   updateCalculations();
 }
 
@@ -553,25 +577,28 @@ function useCurrentAs(point) {
   }
   saveConfig();
   updateCalculations();
+  updateMap();
 }
 
 function wireEvents() {
-  el.startGpsBtn.addEventListener('click', startGps);
-  el.syncBtn.addEventListener('click', syncFiveMinutes);
-  el.resetBtn.addEventListener('click', resetCountdown);
-  el.armStartBtn.addEventListener('click', armOfficialStartTime);
-  el.setABtn.addEventListener('click', () => useCurrentAs('A'));
-  el.setBBtn.addEventListener('click', () => useCurrentAs('B'));
-  el.saveBtn.addEventListener('click', () => { saveConfig(); beep(660, 90); updateCalculations(); });
-  el.centerMapBtn?.addEventListener('click', fitMapToData);
-  el.languageSelect.addEventListener('change', () => loadLanguage(el.languageSelect.value));
+  el.startGpsBtn?.addEventListener('click', startGps);
+  el.syncBtn?.addEventListener('click', syncFiveMinutes);
+  el.resetBtn?.addEventListener('click', resetCountdown);
+  el.armStartBtn?.addEventListener('click', armOfficialStart);
+  el.setABtn?.addEventListener('click', () => useCurrentAs('A'));
+  el.setBBtn?.addEventListener('click', () => useCurrentAs('B'));
+  el.saveBtn?.addEventListener('click', () => { saveConfig(); beep(660, 90); updateCalculations(); updateMap(); });
+  el.centerMapBtn?.addEventListener('click', centerMap);
+  el.languageSelect?.addEventListener('change', () => loadLanguage(el.languageSelect.value));
 
-  for (const input of [el.latA, el.lonA, el.latB, el.lonB, el.buoySide, el.lineBuffer, el.speedUnit, el.distanceMode, el.officialStartTime]) {
-    input.addEventListener('change', () => { saveConfig(); updateCalculations(); });
+  for (const input of [el.latA, el.lonA, el.latB, el.lonB, el.buoySide, el.lineBuffer, el.speedUnit, el.distanceMode]) {
+    input?.addEventListener('change', () => { saveConfig(); updateGpsDisplay(); updateCalculations(); updateMap(); });
   }
 }
 
 loadConfig();
 wireEvents();
 loadLanguage(lang);
+initMap();
 setInterval(updateCalculations, 250);
+updateCalculations();
