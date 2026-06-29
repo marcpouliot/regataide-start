@@ -4,13 +4,13 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#07111f" />
-  <title>Guide d’utilisation — Regataide Start</title>
+  <title>Guide d’utilisation — Regataide Start2</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <header class="topbar">
     <div>
-      <h1>Guide d’utilisation — Regataide Start</h1>
+      <h1>Guide d’utilisation — Regataide Start2</h1>
       <p>V1 avec GPS du téléphone</p>
     </div>
     <div class="top-actions">
@@ -19,11 +19,10 @@
     </div>
   </header>
   <main class="guide-page">
-
     <section class="panel">
       <h2>But de l’application</h2>
-      <p>Regataide Start aide le régatier à gérer son approche de la ligne de départ avec le GPS du téléphone. Ce n’est pas un outil officiel de jugement.</p>
-      <p>L’app calcule la distance perpendiculaire à la ligne A-B, le côté de la ligne, le temps restant et la vitesse idéale pour atteindre la ligne à la prochaine minute pile.</p>
+      <p>Regataide Start2 aide le régatier à gérer son approche de la ligne de départ avec le GPS du téléphone. Ce n’est pas un outil officiel de jugement.</p>
+      <p>L’app calcule la distance, le côté de la ligne, le temps restant et la vitesse idéale pour atteindre la ligne à la prochaine minute pile.</p>
     </section>
 
     <section class="panel">
@@ -34,53 +33,19 @@
         <li><strong>Bouée à bâbord</strong> = au passage, le bateau laisse la bouée du côté bâbord.</li>
         <li><strong>Bouée à tribord</strong> = au passage, le bateau laisse la bouée du côté tribord.</li>
       </ul>
-      <p>La zone tampon évite de traiter une erreur GPS de quelques mètres comme un franchissement certain.</p>
+      <p>Coordonnées par défaut : comité A = 45.840722, -71.112139 ; bouée B = 45.9404030, -71.1172860.</p>
     </section>
 
     <section class="panel">
-      <h2>Démarrage rapide</h2>
+      <h2>Exemple d’utilisation</h2>
       <ol>
-        <li>Ouvrir l’app en HTTPS sur le téléphone.</li>
-        <li>Appuyer sur <strong>Activer GPS</strong> et accepter la permission.</li>
-        <li>Entrer les coordonnées du bateau comité A et de la bouée B.</li>
+        <li>Ouvrir l’application sur téléphone en HTTPS.</li>
+        <li>Appuyer sur <strong>Activer GPS</strong>.</li>
+        <li>Vérifier ou modifier les coordonnées A/B.</li>
         <li>Choisir <strong>Bouée à bâbord</strong> ou <strong>Bouée à tribord</strong>.</li>
-        <li>Choisir l’unité de vitesse : nœuds ou milles/heure.</li>
-        <li>Appuyer sur <strong>SYNC 5:00</strong> au signal de cinq minutes, ou entrer l’heure officielle et appuyer sur <strong>Armer cette heure</strong>.</li>
+        <li>Appuyer sur <strong>SYNC 5:00</strong> au signal 5 minutes, ou entrer l’heure officielle.</li>
+        <li>Lire la distance, la vitesse actuelle, la vitesse idéale et l’état.</li>
       </ol>
-    </section>
-
-    <section class="panel">
-      <h2>Exemple 1 — Synchronisation au signal 5 minutes</h2>
-      <p>Au signal sonore officiel de 5:00, appuyer sur <strong>SYNC 5:00</strong>.</p>
-      <pre>Temps restant : 4:18
-Cible : 4:00
-Temps disponible : 18 s
-Distance ligne : 42 m
-Vitesse idéale : 4.5 nds</pre>
-      <p>Interprétation : pour couper la ligne à 4:00, il faudrait viser environ 4.5 nœuds vers la ligne.</p>
-    </section>
-
-    <section class="panel">
-      <h2>Exemple 2 — Départ officiel à heure fixe</h2>
-      <p>La régate démarre à 13:35:00. Entrer <strong>13:35:00</strong> dans “Départ officiel aujourd’hui”, puis appuyer sur <strong>Armer cette heure</strong>.</p>
-      <p>L’app utilisera l’heure du téléphone. Vérifier que l’heure du téléphone est correcte.</p>
-    </section>
-
-    <section class="panel">
-      <h2>Exemple 3 — Mauvais côté de la ligne</h2>
-      <p>Si l’état affiche <strong>Côté course / ligne franchie</strong> ou <strong>REVENIR</strong>, l’app considère que le bateau est du mauvais côté de la ligne de départ. Revenir du bon côté avant de reprendre le calcul utile.</p>
-    </section>
-
-
-    <section class="panel">
-      <h2>Carte</h2>
-      <p>La carte affiche le bateau, le bateau comité A, la bouée B, la ligne de départ, le centre de ligne et le point GAP.</p>
-      <ul>
-        <li><strong>Trait blanc</strong> : ligne de départ A-B.</li>
-        <li><strong>Point GAP</strong> : point utilisé par le mode de distance choisi.</li>
-        <li><strong>Ligne pointillée</strong> : distance visuelle entre le bateau et le point GAP.</li>
-      </ul>
-      <p>Le bouton <strong>Centrer</strong> recentre la carte sur le bateau et la ligne.</p>
     </section>
 
     <section class="panel">
@@ -88,6 +53,20 @@ Vitesse idéale : 4.5 nds</pre>
       <p><strong>Perpendiculaire</strong> : mesure le gap jusqu’à la ligne A-B. C’est le mode recommandé pour le départ.</p>
       <p><strong>Centre</strong> : mesure la distance jusqu’au milieu de la ligne. Utile pour comparer et déboguer.</p>
     </section>
+
+    <section class="panel">
+      <h2>Carte</h2>
+      <p>La carte affiche le bateau, le bateau comité A, la bouée B, la ligne de départ, le centre de ligne et le point GAP.</p>
+      <p>Le bouton <strong>Centrer</strong> recentre la carte sur le bateau, ou sur la ligne si le GPS n’est pas encore actif.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Configuration avec fichier JSON</h2>
+      <p>Entre un nom dans <strong>Nom du fichier</strong>, puis utilise <strong>Exporter fichier</strong>. Le navigateur crée un fichier JSON dans les téléchargements.</p>
+      <p>Pour reprendre une configuration, utilise <strong>Charger fichier</strong> et sélectionne le JSON exporté.</p>
+      <p><strong>Sauvegarder local</strong> conserve la configuration seulement sur ce téléphone/navigateur.</p>
+    </section>
+
     <section class="panel">
       <h2>Conseils de test</h2>
       <ul>
@@ -97,7 +76,6 @@ Vitesse idéale : 4.5 nds</pre>
         <li>En milles/heure, vérifier plus facilement les calculs terrestres. En régate, utiliser les nœuds.</li>
       </ul>
     </section>
-
   </main>
 </body>
 </html>

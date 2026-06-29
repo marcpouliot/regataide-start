@@ -4,14 +4,14 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#07111f" />
-  <title>User Guide — Regataide Start</title>
+  <title>User guide — Regataide Start2</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <header class="topbar">
     <div>
-      <h1>User Guide — Regataide Start</h1>
-      <p>V1 using phone GPS</p>
+      <h1>User guide — Regataide Start2</h1>
+      <p>V1 with phone GPS</p>
     </div>
     <div class="top-actions">
       <a class="guide-link" href="index.html">Back to app</a>
@@ -19,11 +19,10 @@
     </div>
   </header>
   <main class="guide-page">
-
     <section class="panel">
       <h2>Purpose</h2>
-      <p>Regataide Start helps a sailor manage the approach to the starting line using the phone GPS. It is not an official judging tool.</p>
-      <p>The app calculates perpendicular distance to line A-B, line side, time remaining, and ideal speed to reach the line at the next full minute.</p>
+      <p>Regataide Start2 helps the sailor manage the approach to the starting line using the phone GPS. It is not an official line-judging tool.</p>
+      <p>The app calculates distance, line side, time remaining, and the ideal speed to reach the line at the next exact minute.</p>
     </section>
 
     <section class="panel">
@@ -31,73 +30,52 @@
       <ul>
         <li><strong>A</strong> = committee boat.</li>
         <li><strong>B</strong> = starting buoy.</li>
-        <li><strong>Buoy to port</strong> = when crossing, the boat leaves the buoy on port.</li>
-        <li><strong>Buoy to starboard</strong> = when crossing, the boat leaves the buoy on starboard.</li>
+        <li><strong>Buoy to port</strong> = when crossing, the boat leaves the buoy on the port side.</li>
+        <li><strong>Buoy to starboard</strong> = when crossing, the boat leaves the buoy on the starboard side.</li>
       </ul>
-      <p>The buffer avoids treating a few meters of GPS error as a definite crossing.</p>
+      <p>Default coordinates: committee A = 45.840722, -71.112139; buoy B = 45.9404030, -71.1172860.</p>
     </section>
 
     <section class="panel">
-      <h2>Quick start</h2>
+      <h2>Example</h2>
       <ol>
-        <li>Open the app over HTTPS on the phone.</li>
-        <li>Tap <strong>Enable GPS</strong> and accept permission.</li>
-        <li>Enter the coordinates for committee boat A and buoy B.</li>
+        <li>Open the app on the phone over HTTPS.</li>
+        <li>Tap <strong>Enable GPS</strong>.</li>
+        <li>Check or edit the A/B coordinates.</li>
         <li>Choose <strong>Buoy to port</strong> or <strong>Buoy to starboard</strong>.</li>
-        <li>Choose the speed unit: knots or miles/hour.</li>
-        <li>Tap <strong>SYNC 5:00</strong> at the five-minute signal, or enter the official start time and tap <strong>Arm this time</strong>.</li>
+        <li>Tap <strong>SYNC 5:00</strong> at the five-minute signal, or enter the official start time.</li>
+        <li>Read distance, current speed, ideal speed, and status.</li>
       </ol>
     </section>
 
     <section class="panel">
-      <h2>Example 1 — Sync at the five-minute signal</h2>
-      <p>At the official 5:00 signal, tap <strong>SYNC 5:00</strong>.</p>
-      <pre>Time remaining: 4:18
-Target: 4:00
-Available time: 18 s
-Line distance: 42 m
-Ideal speed: 4.5 kt</pre>
-      <p>Meaning: to cross the line at 4:00, aim for about 4.5 knots toward the line.</p>
+      <h2>Distance mode</h2>
+      <p><strong>Perpendicular</strong>: measures the gap to line A-B. Recommended for starts.</p>
+      <p><strong>Center</strong>: measures distance to the middle of the line. Useful for comparison/debugging.</p>
     </section>
-
-    <section class="panel">
-      <h2>Example 2 — Fixed official start time</h2>
-      <p>The race starts at 13:35:00. Enter <strong>13:35:00</strong> under “Official start today”, then tap <strong>Arm this time</strong>.</p>
-      <p>The app uses the phone clock. Make sure the phone time is correct.</p>
-    </section>
-
-    <section class="panel">
-      <h2>Example 3 — Wrong side of the line</h2>
-      <p>If the state shows <strong>Course side / line crossed</strong> or <strong>RETURN</strong>, the app believes the boat is on the wrong side of the starting line. Return to the pre-start side before using the calculation again.</p>
-    </section>
-
 
     <section class="panel">
       <h2>Map</h2>
-      <p>The map shows the boat, committee boat A, buoy B, the starting line, the line center, and the GAP point.</p>
-      <ul>
-        <li><strong>White line</strong>: starting line A-B.</li>
-        <li><strong>GAP point</strong>: point used by the selected distance mode.</li>
-        <li><strong>Dashed line</strong>: visual distance from the boat to the GAP point.</li>
-      </ul>
-      <p>The <strong>Center</strong> button recenters the map on the boat and the line.</p>
+      <p>The map shows the boat, committee boat A, buoy B, starting line, line center, and GAP point.</p>
+      <p><strong>Center</strong> recenters the map on the boat, or on the line if GPS is not active yet.</p>
     </section>
 
     <section class="panel">
-      <h2>Distance mode</h2>
-      <p><strong>Perpendicular</strong>: measures the gap to line A-B. Recommended for starting.</p>
-      <p><strong>Center</strong>: measures distance to the middle of the line. Useful for comparison and debugging.</p>
+      <h2>JSON configuration file</h2>
+      <p>Enter a name in <strong>File name</strong>, then use <strong>Export file</strong>. The browser creates a JSON file in downloads.</p>
+      <p>To restore a configuration, use <strong>Load file</strong> and select the exported JSON.</p>
+      <p><strong>Save local</strong> keeps the configuration only on this phone/browser.</p>
     </section>
+
     <section class="panel">
       <h2>Testing tips</h2>
       <ul>
-        <li>First test walking or driving slowly in an open area.</li>
-        <li>Use a 10 to 15 m buffer with phone GPS.</li>
+        <li>Test first while walking or driving slowly in an open area.</li>
+        <li>Use a 10–15 m buffer with phone GPS.</li>
         <li>Watch the displayed GPS accuracy. If it says ±20 m, results will be approximate.</li>
-        <li>Use miles/hour for easier land testing. Use knots for sailing.</li>
+        <li>Use mph for easy land testing. Use knots for regattas.</li>
       </ul>
     </section>
-
   </main>
 </body>
 </html>

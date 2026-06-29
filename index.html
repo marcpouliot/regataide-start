@@ -13,24 +13,25 @@
   <header class="topbar">
     <div class="brand-block">
       <h1>Regataide Start2</h1>
-      <p data-i18n="appSubtitle">Aide GAP pour départ de régate</p>
+      <p data-i18n="appSubtitle">Aide GPS pour départ de régate</p>
     </div>
 
     <div class="header-clock" aria-label="Compte à rebours départ">
       <span data-i18n="startCountdown">Départ dans</span>
       <strong id="fixedTimer">--:--</strong>
-      <small id="fixedTarget">Cible : --</small>
+      <small id="fixedTarget" data-i18n="targetEmpty">Cible : --</small>
     </div>
 
     <div class="top-actions">
       <a id="guideLink" class="guide-link" href="guide-fr.html" data-i18n="guide">Guide</a>
+      <button id="fullScreenBtn" class="small-button" type="button" data-i18n="fullscreen">Plein écran</button>
       <label class="language-label"><span data-i18n="language">Langue</span>
         <select id="languageSelect">
           <option value="fr">FR</option>
           <option value="en">EN</option>
         </select>
       </label>
-      <div id="gpsBadge" class="badge bad">GPS OFF</div>
+      <div id="gpsBadge" class="badge bad" data-i18n="gpsOff">GPS OFF</div>
     </div>
   </header>
 
@@ -48,7 +49,7 @@
       </div>
 
       <div class="timer" id="timer">--:--</div>
-      <div class="subline" id="targetLine">Cible : --</div>
+      <div class="subline" id="targetLine" data-i18n="targetEmpty">Cible : --</div>
 
       <div class="controls">
         <button id="startGpsBtn" data-i18n="enableGps">Activer GPS</button>
@@ -129,16 +130,16 @@
       </div>
 
       <label><span data-i18n="committeeLat">Bateau comité A — latitude</span>
-        <input id="latA" inputmode="decimal" placeholder="45.123456" />
+        <input id="latA" inputmode="decimal" placeholder="45.840722" />
       </label>
       <label><span data-i18n="committeeLon">Bateau comité A — longitude</span>
-        <input id="lonA" inputmode="decimal" placeholder="-71.123456" />
+        <input id="lonA" inputmode="decimal" placeholder="-71.112139" />
       </label>
       <label><span data-i18n="buoyLat">Bouée B — latitude</span>
-        <input id="latB" inputmode="decimal" placeholder="45.123556" />
+        <input id="latB" inputmode="decimal" placeholder="45.9404030" />
       </label>
       <label><span data-i18n="buoyLon">Bouée B — longitude</span>
-        <input id="lonB" inputmode="decimal" placeholder="-71.123656" />
+        <input id="lonB" inputmode="decimal" placeholder="-71.1172860" />
       </label>
 
       <label><span data-i18n="buoyPassage">Passage de la bouée B</span>
@@ -151,8 +152,20 @@
       <label><span data-i18n="buffer">Zone tampon ligne, mètres</span>
         <input id="lineBuffer" inputmode="numeric" value="10" />
       </label>
+    </section>
 
-      <button id="saveBtn" data-i18n="saveConfig">Sauvegarder configuration</button>
+    <section class="panel config-panel">
+      <h2 data-i18n="configFiles">Configuration</h2>
+      <label><span data-i18n="configName">Nom du fichier</span>
+        <input id="configFileName" value="regataide-start-config" placeholder="regataide-start-config" />
+      </label>
+      <div class="file-actions">
+        <button id="saveBtn" data-i18n="saveLocalConfig">Sauvegarder local</button>
+        <button id="exportConfigBtn" class="primary" data-i18n="exportConfig">Exporter fichier</button>
+        <label class="button-like" for="importConfigFile" data-i18n="loadConfig">Charger fichier</label>
+        <input id="importConfigFile" class="hidden-file" type="file" accept="application/json,.json" />
+      </div>
+      <p id="configStatus" class="hint" data-i18n="configHint">La sauvegarde locale reste sur ce téléphone. L’export crée un fichier JSON téléchargeable.</p>
     </section>
 
     <section class="panel notes">

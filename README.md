@@ -38,3 +38,19 @@ Le GPS d’un téléphone peut varier de plusieurs mètres. Cette app est une ai
 ## Carte
 
 La carte utilise Leaflet et les tuiles OpenStreetMap. Elle demande une connexion internet pour charger la bibliothèque et les fonds de carte. Si la carte ne charge pas, le mode texte de l’app continue de fonctionner.
+
+## Configurations JSON
+
+Par défaut, la V1 charge :
+
+- Comité A : `45.840722, -71.112139`
+- Bouée B : `45.9404030, -71.1172860`
+
+Le panneau **Configuration** permet :
+
+- de choisir un nom de fichier ;
+- de sauvegarder localement sur le téléphone ;
+- d’exporter un fichier `.json` ;
+- de recharger un fichier `.json` plus tard.
+
+Le navigateur téléchargera le fichier dans le dossier de téléchargements de l’appareil. L’app ne peut pas choisir directement un dossier arbitraire pour des raisons de sécurité navigateur.

@@ -1,0 +1,16 @@
+{
+  "app": "Regataide Start2",
+  "version": 1,
+  "exportedAt": "2026-06-29T15:55:52.261Z",
+  "settings": {
+    "latA": "45.840722",
+    "lonA": "-71.112139",
+    "latB": "45.8404030",
+    "lonB": "-71.1172860",
+    "buoySide": "port",
+    "lineBuffer": "10",
+    "speedUnit": "knots",
+    "distanceMode": "perpendicular",
+    "configFileName": "regataide-start-config"
+  }
+}
